@@ -6,6 +6,8 @@ import { db } from "@/firebaseConfig";
 import { ManhwaSlider } from "@/components/manhwa-slider";
 import { ManhwaCard, ManhwaCardSkeleton } from "@/components/manhwa-card";
 import { SEO } from "@/components/seo";
+import Autoplay from "embla-carousel-autoplay";
+import useEmblaCarousel from "embla-carousel-react";
 
 // Tipe data untuk quote section
 interface QuoteSectionData {
@@ -15,34 +17,39 @@ interface QuoteSectionData {
 }
 
 // Fungsi untuk mengambil data dari Firestore
-const fetchQuoteSectionData = async (): Promise<QuoteSectionData | null> => {
+const fetchQuoteSectionData = async (): Promise<QuoteSectionData[]> => {
   // Jika db null (Firebase tidak terkonfigurasi), jangan lakukan apa-apa.
-  if (!db) return null;
+  if (!db) return [];
   const docRef = doc(db, "dashboard", "settings");
   const docSnap = await getDoc(docRef);
-  if (docSnap.exists() && docSnap.data()?.quoteSection) {
-    return docSnap.data().quoteSection as QuoteSectionData;
+  if (docSnap.exists() && Array.isArray(docSnap.data()?.quoteSection)) {
+    return docSnap.data().quoteSection as QuoteSectionData[];
   }
-  return null;
+  return [];
 };
 
 export default function Home() {
   // Default data for the quote section
-  const defaultQuoteData: QuoteSectionData = {
-    quote: "Persahabatan itu adalah tempat saling berbagi rasa sakit.",
-    author: "Yoimiya",
-    authorImageUrl: "https://cdn.nefyu.my.id/030i.jpeg",
-  };
+  const defaultQuotes: QuoteSectionData[] = [
+    {
+      quote: "Persahabatan itu adalah tempat saling berbagi rasa sakit.",
+      author: "Yoimiya",
+      authorImageUrl: "https://cdn.nefyu.my.id/030i.jpeg",
+    },
+  ];
 
   // Query untuk mengambil data quote
-  const { data: fetchedQuoteData } = useQuery({
+  const { data: quotes } = useQuery({
     queryKey: ["quoteSection"],
     queryFn: fetchQuoteSectionData,
     staleTime: 300000, // 5 menit
   });
 
-  // Gunakan data yang diambil atau data default jika tidak ada
-  const quoteData = fetchedQuoteData || defaultQuoteData;
+  const quoteData = quotes && quotes.length > 0 ? quotes : defaultQuotes;
+
+  const [emblaRef] = useEmblaCarousel({ loop: true }, [
+    Autoplay({ delay: 5000 }),
+  ]);
 
   const { data: recommendations, isLoading: loadingRec } = useQuery({
     queryKey: ["/api/manhwa-recommendation"],
@@ -83,23 +90,31 @@ export default function Home() {
       {/* Quote Section Implementation */}
       <div className="container mx-auto max-w-7xl px-4">
         <section className="mb-12">
-            <div className="bg-card text-card-foreground rounded-lg p-4 flex items-center gap-4 shadow-md">
-                <img
-                    src={quoteData.authorImageUrl}
-                    alt={quoteData.author}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-primary"
-                />
-                <div className="flex-1">
-                    <p className="italic text-foreground font-medium">
-                        "{quoteData.quote}"
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1 text-right w-full">
-                        - {quoteData.author}
-                    </p>
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {quoteData.map((quote, index) => (
+                <div className="flex-shrink-0 w-full" key={index}>
+                  <div className="bg-card text-card-foreground rounded-lg p-4 flex items-center gap-4 shadow-md">
+                    <img
+                      src={quote.authorImageUrl}
+                      alt={quote.author}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-primary"
+                    />
+                    <div className="flex-1">
+                      <p className="italic text-foreground font-medium">
+                        "{quote.quote}"
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1 text-right w-full">
+                        - {quote.author}
+                      </p>
+                    </div>
+                  </div>
                 </div>
+              ))}
             </div>
+          </div>
         </section>
-    </div>
+      </div>
 
       <div className="container mx-auto max-w-7xl px-4 space-y-16">
         {/* Terbaru Section */}

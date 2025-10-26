@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon } from "lucide-react";
+import { Search, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -52,10 +52,7 @@ export function Header() {
             data-testid="link-home"
             className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-lg px-3 py-2 transition-all"
           >
-            <BookOpen className="h-6 w-6 text-primary" />
-            <span className="font-display text-xl font-bold tracking-tight">
-              COMIC KU
-            </span>
+            <img src="/src/assets/logo.png" alt="Logo" className="h-8" />
           </Link>
 
           {/* Desktop Search */}

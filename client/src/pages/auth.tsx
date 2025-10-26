@@ -37,7 +37,8 @@ const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="container flex items-center justify-center min-h-[calc(100vh-10rem)]">
+    <div className="container flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
+      <img src="/src/assets/logo.png" alt="Logo" className="h-16 mb-8" />
       <Tabs defaultValue="signin" className="w-[400px]">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="signin">Sign In</TabsTrigger>
