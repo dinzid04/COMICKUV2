@@ -82,7 +82,7 @@ export default function ManhwaListPage() {
           Sebelumnya
         </Button>
         <span className="font-semibold">Halaman {page}</span>
-        <Button onClick={() => setPage(p => p + 1)} disabled={!pagination?.hasNextPage || isFetching}>
+        <Button onClick={() => setPage(p => p + 1)} disabled={isFetching}>
           Selanjutnya
           <ChevronRight className="h-4 w-4 ml-2" />
         </Button>
