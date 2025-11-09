@@ -1,0 +1,74 @@
+Buatkan project website bernama **manhwaku-v1** menggunakan React + TailwindCSS (boleh pakai Next.js).  
+Fungsinya adalah untuk menampilkan dan membaca manhwa dengan data dari API berikut:
+
+🌐 Base URL:
+https://mnhwa-api.vercel.app/api
+
+Gunakan endpoint yang tersedia:
+1. /manhwa-new → daftar manhwa terbaru
+2. /manhwa-popular → manhwa populer
+3. /manhwa-top → manhwa top
+4. /manhwa-ongoing → manhwa ongoing
+5. /manhwa-recommendation → manhwa rekomendasi
+6. /manhwa-detail/:manhwaId → detail manhwa
+7. /chapter/:chapterId → baca chapter
+8. /genres → daftar genre
+9. /genre/:genreId → manhwa per genre
+10. /search/:searchId → pencarian manhwa
+
+---
+
+### 🎨 UI/UX yang harus dibuat:
+
+#### 🏠 1. Home Page
+- Header dengan logo “manhwaku-v1”, kolom pencarian, dan tombol menu.
+- Slider/banner menampilkan manhwa rekomendasi (`/manhwa-recommendation`).
+- Section “📖 Terbaru” (data dari `/manhwa-new`)
+- Section “🔥 Populer” (data dari `/manhwa-popular`)
+- Section “🏆 Top Rated” (data dari `/manhwa-top`)
+- Tombol “Lihat Semua” yang menuju ke halaman kategori masing-masing.
+
+#### 🔍 2. Search Page
+- Input pencarian yang memanggil `/search/:query`
+- Tampilkan hasil dalam bentuk grid kartu (judul, cover, rating, status).
+
+#### 📂 3. Genre Page
+- Ambil daftar genre dari `/genres`
+- Klik genre → menuju halaman `/genre/:genreId`
+- Di halaman genre, tampilkan list manhwa sesuai genre.
+
+#### 📘 4. Detail Page (halaman per manhwa)
+- Ambil data dari `/manhwa-detail/:manhwaId`
+- Tampilkan:
+  - Cover, judul, genre, status, rating, dan deskripsi.
+  - Daftar chapter (link menuju `/chapter/:chapterId`)
+
+#### 📖 5. Chapter Reader Page
+- Ambil gambar chapter dari `/chapter/:chapterId`
+- Tampilkan gambar satu per satu secara vertikal (scroll)
+- Navigasi: tombol “Previous Chapter” dan “Next Chapter”.
+
+---
+
+### 🧩 Tambahan Fitur
+- Loading skeleton (pakai framer-motion / shimmer)
+- Infinite scroll untuk list manhwa
+- Dark mode toggle 🌙
+- Responsif (mobile-friendly)
+- SEO title per halaman (gunakan judul manhwa)
+- Error handler bila data tidak ditemukan (404 state)
+- Footer dengan credit “Created by Lannz”
+
+---
+
+### 📦 Output yang diharapkan
+- Struktur folder rapi (`/pages`, `/components`, `/services/api.js`)
+- Semua fetch data menggunakan `fetch` atau `axios`
+- Komponen reusable (Card, Navbar, Footer, Reader, Loader)
+- Desain bersih seperti **asuratoon, flamecomics, atau toonily**
+
+---
+
+🎯 Tujuan akhir:
+Website **manhwaku-v1** berfungsi penuh sebagai **web reader manhwa** gratis dengan data real-time dari API `https://mnhwa-api.vercel.app/api`.
+
