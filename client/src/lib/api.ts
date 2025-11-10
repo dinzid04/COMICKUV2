@@ -7,7 +7,7 @@ import type {
   SearchResponse,
 } from "@shared/types";
 
-const BASE_URL = "https://www.sankavollerei.com/comic/komikstation";
+const BASE_URL = "https://www.sankavollerei.com/comic/bacakomik";
 
 export const api = {
   // Get home page data (trending and latest updates)

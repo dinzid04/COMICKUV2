@@ -72,15 +72,14 @@ export interface ManhwaDetail {
 
 // For Chapter page
 export interface ChapterData {
+  creator: string;
+  success: boolean;
   title: string;
-  comicSlug: string | null;
   images: string[];
-  prevSlug: string | null;
-  nextSlug: string | null;
-  chapterList: Array<{
-    title: string;
-    slug: string | null;
-  }>;
+  navigation: {
+    next: string | null;
+    prev: string | null;
+  };
 }
 
 // For Search results
