@@ -7,8 +7,8 @@ import type {
   SearchResponse,
 } from "@shared/types";
 
-const BASE_URL = "https://www.sankavollerei.com/comic/bacakomik";
-
+const BASE_URL = "https://www.sankavollerei.com/comic/komikstation";
+const BASE_GET = " https://www.sankavollerei.com/comic/bacakomik";
 export const api = {
   // Get home page data (trending and latest updates)
   getHomePage: async (): Promise<HomePageResponse> => {
@@ -58,7 +58,7 @@ export const api = {
 
   // Get chapter data
   getChapter: async (chapterId: string): Promise<ChapterData> => {
-    const response = await fetch(`${BASE_URL}/chapter/${chapterId}`);
+    const response = await fetch(`${BASE_GET}/chapter/${chapterId}`);
     if (!response.ok) throw new Error("Failed to fetch chapter");
     return response.json();
   },
