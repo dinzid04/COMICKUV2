@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useRoute } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -51,19 +51,29 @@ function App() {
       <ThemeProvider defaultTheme="system" storageKey="manhwaku-theme">
         <AuthProvider>
           <TooltipProvider>
-            <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-1 pb-16 md:pb-0">
-              <Router />
-            </main>
-            <Footer />
-            <BottomNavbar />
-          </div>
-          <Toaster />
-        </TooltipProvider>
+            <AppLayout />
+            <Toaster />
+          </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppLayout() {
+  const [isChapterReader] = useRoute("/chapter/:id");
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      {!isChapterReader && <Header />}
+      <main
+        className={`flex-1 ${!isChapterReader ? "pb-16 md:pb-0" : ""}`}
+      >
+        <Router />
+      </main>
+      {!isChapterReader && <Footer />}
+      {!isChapterReader && <BottomNavbar />}
+    </div>
   );
 }
 
