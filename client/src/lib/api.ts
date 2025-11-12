@@ -58,7 +58,7 @@ export const api = {
 
   // Get chapter data
   getChapter: async (chapterId: string): Promise<ChapterData> => {
-    const response = await fetch(`${BASE_GET}/chapter/${chapterId}`);
+    const response = await fetch(`${BASE_URL}/chapter/${chapterId}`);
     if (!response.ok) throw new Error("Failed to fetch chapter");
     return response.json();
   },
