@@ -55,9 +55,9 @@ export default function ManhwaDetail() {
         toast({ title: "Removed from Favorites" });
       } else {
         await setDoc(docRef, {
-          id: manhwaId,
+          slug: manhwaId,
           title: data.title,
-          image: displayImage,
+          imageSrc: displayImage,
           addedAt: new Date(),
         });
         toast({ title: "Added to Favorites" });

@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { SEO } from "@/components/seo";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebaseConfig";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, increment } from "firebase/firestore";
 import { AutoScrollControls } from "@/components/auto-scroll-controls";
 
 interface ManhwaState {
@@ -61,7 +61,29 @@ export default function ChapterReader() {
           console.error("Error saving history:", error);
         }
       };
+      const incrementChaptersRead = async () => {
+        const userDocRef = doc(db, 'users', user.uid);
+        const leaderboardDocRef = doc(db, 'leaderboard', user.uid);
+        try {
+          await setDoc(userDocRef, { chaptersRead: increment(1) }, { merge: true });
+
+          // Update leaderboard
+          const userDoc = await getDoc(userDocRef);
+          if(userDoc.exists()){
+            const userData = userDoc.data();
+            await setDoc(leaderboardDocRef, {
+              chaptersRead: userData.chaptersRead,
+              nickname: userData.nickname,
+              photoUrl: userData.photoUrl,
+              uid: user.uid
+            }, { merge: true });
+          }
+        } catch (error) {
+          console.error("Error incrementing chapters read:", error);
+        }
+      };
       saveHistory();
+      incrementChaptersRead();
     }
   }, [chapterId, user, data, manhwaState]);
 

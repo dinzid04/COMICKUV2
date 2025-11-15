@@ -98,3 +98,21 @@ export interface SearchResult {
 export interface SearchResponse {
   seriesList: SearchResult[];
 }
+
+// For User Profile
+export interface User {
+  uid: string;
+  nickname: string;
+  email: string;
+  photoUrl?: string;
+  bannerUrl?: string;
+  bio?: string;
+  socialLinks?: {
+    whatsapp?: string;
+    github?: string;
+    instagram?: string;
+    tiktok?: string;
+    other?: string;
+  };
+  chaptersRead?: number;
+}
