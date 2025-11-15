@@ -62,6 +62,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Aturan untuk koleksi 'leaderboard'
+    match /leaderboard/{userId} {
+      // Siapa saja bisa membaca data leaderboard
+      allow read: if true;
+      // Pengguna hanya bisa menulis data leaderboard mereka sendiri
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Aturan untuk koleksi 'quotes'
     match /quotes/{quoteId} {
       // Siapa saja bisa membaca kutipan
@@ -104,3 +112,30 @@ Untuk mengakses dasbor admin, Anda perlu menambahkan UID pengguna Anda ke dalam 
     ```
 
 Setelah menyimpan perubahan, pengguna dengan UID tersebut akan memiliki akses ke dasbor admin di `/admin`.
+
+---
+
+## Mengaktifkan Login Google & GitHub (OAuth)
+
+Aplikasi ini mendukung login melalui Google dan GitHub. Untuk mengaktifkannya, ikuti langkah-langkah berikut di Firebase Console.
+
+### Langkah 1: Aktifkan Penyedia OAuth
+
+1.  Buka proyek Anda di **Firebase Console**.
+2.  Navigasi ke **Build > Authentication > Sign-in method**.
+3.  Klik **"Add new provider"**.
+4.  Pilih **Google** dan aktifkan. Anda mungkin perlu memberikan nama proyek publik dan email dukungan.
+5.  Ulangi proses untuk **GitHub**. Anda harus memberikan **Client ID** dan **Client secret** dari aplikasi OAuth GitHub Anda.
+    *   Untuk mendapatkan kredensial ini, buat aplikasi OAuth baru di [GitHub Developer Settings](https://github.com/settings/developers).
+    *   Saat membuat aplikasi, GitHub akan meminta **Authorization callback URL**. Firebase akan menyediakan URL ini untuk Anda salin dan tempel di pengaturan aplikasi GitHub Anda.
+
+### Langkah 2: Otorisasi Domain Anda
+
+Penting untuk mengotorisasi domain tempat Anda akan menerapkan aplikasi agar Firebase dapat menangani callback OAuth dengan aman.
+
+1.  Di Firebase Console, navigasi ke **Build > Authentication > Settings**.
+2.  Di bawah tab **"Authorized domains"**, klik **"Add domain"**.
+3.  Masukkan domain tempat aplikasi Anda akan di-host (misalnya, `your-app-name.vercel.app` atau domain kustom Anda).
+4.  Jika Anda melakukan pengujian secara lokal, `localhost` biasanya sudah diotorisasi secara default.
+
+Setelah menyelesaikan langkah-langkah ini, pengguna akan dapat masuk ke aplikasi Anda menggunakan akun Google atau GitHub mereka.
