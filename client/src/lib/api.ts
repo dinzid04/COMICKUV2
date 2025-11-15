@@ -36,6 +36,24 @@ export const api = {
     return response.json();
   },
 
+  getManhwaManga: async (page = 1): Promise<ManhwaListResponse> => {
+    const response = await fetch(`${BASE_URL}/list?type=manga&status=ongoing&order=latest&page=${page}`);
+    if (!response.ok) throw new Error("Failed to fetch manga");
+    return response.json();
+  },
+
+  getManhwaComic: async (page = 1): Promise<ManhwaListResponse> => {
+    const response = await fetch(`${BASE_URL}/list?type=comic&status=ongoing&order=latest&page=${page}`);
+    if (!response.ok) throw new Error("Failed to fetch comic");
+    return response.json();
+  },
+
+  getManhwaManhua: async (page = 1): Promise<ManhwaListResponse> => {
+    const response = await fetch(`${BASE_URL}/list?type=manhua&status=ongoing&order=latest&page=${page}`);
+    if (!response.ok) throw new Error("Failed to fetch manhua");
+    return response.json();
+  },
+
   // Get manhwa lists without pagination
   getManhwaTop: async (): Promise<ManhwaTopResponse> => {
     const response = await fetch(`${BASE_URL}/top-weekly`);
