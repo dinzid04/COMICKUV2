@@ -30,6 +30,8 @@ export interface HomePageResponse {
 
 // Response for lists like new, popular, ongoing
 export interface ManhwaListResponse {
+  creator?: string;
+  success?: boolean;
   pagination?: Pagination;
   results: ManhwaListItem[];
 }
@@ -50,6 +52,8 @@ export interface ManhwaTopResponse {
 
 // For Manhwa Detail page
 export interface ManhwaDetail {
+  creator?: string;
+  success?: boolean;
   title: string;
   alternative?: string;
   imageSrc: string;
