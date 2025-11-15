@@ -14,6 +14,7 @@ import SearchPage from "@/pages/search";
 import ManhwaDetail from "@/pages/manhwa-detail";
 import ChapterReader from "@/pages/chapter-reader";
 import ManhwaListPage from "@/pages/manhwa-list";
+import AzListPage from "@/pages/az-list";
 import AuthPage from "@/pages/auth";
 import HistoryPage from "@/pages/history";
 import ProfilePage from "@/pages/profile";
@@ -30,6 +31,7 @@ function Router() {
         <ProtectedRoute component={AdminPage} />
       </Route>
       <Route path="/list/:type" component={ManhwaListPage} />
+      <Route path="/az-list/:letter" component={AzListPage} />
       <Route path="/login" component={AuthPage} />
       <Route path="/register" component={AuthPage} />
       <Route path="/profile" component={ProfilePage} />

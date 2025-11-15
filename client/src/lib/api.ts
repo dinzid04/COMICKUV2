@@ -87,6 +87,13 @@ export const api = {
     if (!response.ok) throw new Error("Failed to search manhwa");
     return response.json();
   },
+
+  // Get manhwa by A-Z
+  getManhwaByAz: async (letter: string, page = 1): Promise<ManhwaListResponse> => {
+    const response = await fetch(`${BASE_URL}/az-list/${letter}?page=${page}`);
+    if (!response.ok) throw new Error(`Failed to fetch manhwa for letter ${letter}`);
+    return response.json();
+  },
 };
 
 // Helper to extract manhwa ID from URL/slug
