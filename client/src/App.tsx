@@ -21,6 +21,7 @@ import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 import { ProtectedRoute } from "@/components/protected-route";
+import MusicPlayer from "@/components/MusicPlayer";
 
 function Router() {
   return (
@@ -73,6 +74,7 @@ function AppLayout() {
       </main>
       {!isChapterReader && <Footer />}
       {!isChapterReader && <BottomNavbar />}
+      <MusicPlayer />
     </div>
   );
 }
