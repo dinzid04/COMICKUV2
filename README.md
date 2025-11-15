@@ -62,6 +62,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Aturan untuk koleksi 'leaderboard'
+    match /leaderboard/{userId} {
+      // Siapa saja bisa membaca data leaderboard
+      allow read: if true;
+      // Pengguna hanya bisa menulis data leaderboard mereka sendiri
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Aturan untuk koleksi 'quotes'
     match /quotes/{quoteId} {
       // Siapa saja bisa membaca kutipan
