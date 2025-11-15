@@ -7,12 +7,15 @@ import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import { SEO } from "@/components/seo";
 import { useState, useEffect } from "react";
 
-type ListType = "new" | "popular" | "ongoing";
+type ListType = "new" | "popular" | "ongoing" | "manga" | "comic" | "manhua";
 
 const listDetails: Record<ListType, { title: string; fn: (page: number) => ReturnType<typeof api.getManhwaNew> }> = {
   new: { title: "Manhwa Terbaru", fn: api.getManhwaNew },
   popular: { title: "Manhwa Populer", fn: api.getManhwaPopular },
   ongoing: { title: "Manhwa Ongoing", fn: api.getManhwaOngoing },
+  manga: { title: "Manga", fn: api.getManhwaManga },
+  comic: { title: "Comic", fn: api.getManhwaComic },
+  manhua: { title: "Manhua", fn: api.getManhwaManhua },
 };
 
 export default function ManhwaListPage() {
