@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { User } from 'shared/types'; // Assuming types are in shared
-import { Whatsapp, Github, Instagram, Tiktok } from 'lucide-react';
+import { MessageSquare, Github, Instagram, Music } from 'lucide-react';
 
 const profileSchema = z.object({
   nickname: z.string().min(3, 'Nickname must be at least 3 characters').max(20, 'Nickname must be at most 20 characters'),
@@ -228,10 +228,10 @@ const ProfilePage: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              {userData?.socialLinks?.whatsapp && <a href={userData.socialLinks.whatsapp} target="_blank" rel="noopener noreferrer"><Whatsapp /></a>}
+              {userData?.socialLinks?.whatsapp && <a href={userData.socialLinks.whatsapp} target="_blank" rel="noopener noreferrer"><MessageSquare /></a>}
               {userData?.socialLinks?.github && <a href={userData.socialLinks.github} target="_blank" rel="noopener noreferrer"><Github /></a>}
               {userData?.socialLinks?.instagram && <a href={userData.socialLinks.instagram} target="_blank" rel="noopener noreferrer"><Instagram /></a>}
-              {userData?.socialLinks?.tiktok && <a href={userData.socialLinks.tiktok} target="_blank" rel="noopener noreferrer"><Tiktok /></a>}
+              {userData?.socialLinks?.tiktok && <a href={userData.socialLinks.tiktok} target="_blank" rel="noopener noreferrer"><Music /></a>}
               {userData?.socialLinks?.other && <a href={userData.socialLinks.other} target="_blank" rel="noopener noreferrer"><LinkIcon /></a>}
             </div>
 
