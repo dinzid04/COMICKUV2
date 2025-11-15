@@ -62,6 +62,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Aturan untuk koleksi 'leaderboard'
+    match /leaderboard/{userId} {
+      // Siapa saja bisa membaca data leaderboard
+      allow read: if true;
+      // Pengguna hanya bisa menulis data leaderboard mereka sendiri
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Aturan untuk koleksi 'quotes'
     match /quotes/{quoteId} {
       // Siapa saja bisa membaca kutipan
@@ -104,3 +112,65 @@ Untuk mengakses dasbor admin, Anda perlu menambahkan UID pengguna Anda ke dalam 
     ```
 
 Setelah menyimpan perubahan, pengguna dengan UID tersebut akan memiliki akses ke dasbor admin di `/admin`.
+
+---
+
+## Mengaktifkan Login Google & GitHub (OAuth)
+
+Aplikasi ini mendukung login melalui Google dan GitHub. Berikut adalah cara mengkonfigurasinya.
+
+### Konfigurasi Login Google
+
+Login dengan Google dikelola sepenuhnya oleh Firebase, sehingga konfigurasinya sangat sederhana.
+
+1.  Buka proyek Anda di **Firebase Console**.
+2.  Navigasi ke **Build > Authentication > Sign-in method**.
+3.  Klik **"Add new provider"** dan pilih **Google**.
+4.  **Aktifkan** provider tersebut. Anda mungkin akan diminta untuk memasukkan nama proyek yang akan dilihat publik dan memilih email dukungan.
+5.  Klik **"Save"**.
+
+**Itu saja!** Firebase secara otomatis menangani Client ID, Client Secret, dan URL callback untuk Anda.
+
+### Konfigurasi Login GitHub
+
+Login dengan GitHub memerlukan beberapa langkah manual untuk menghubungkan Firebase dengan aplikasi OAuth GitHub.
+
+**Langkah 1: Dapatkan URL Callback dari Firebase**
+
+1.  Di **Firebase Console**, navigasi ke **Build > Authentication > Sign-in method**.
+2.  Klik **"Add new provider"** dan pilih **GitHub**.
+3.  **Aktifkan** provider tersebut. Firebase akan menampilkan **URL callback otorisasi**. **Salin URL ini**; Anda akan memerlukannya di langkah berikutnya.
+4.  **Biarkan halaman ini terbuka** karena Anda akan kembali untuk memasukkan Client ID dan Secret.
+
+**Langkah 2: Buat Aplikasi OAuth di GitHub**
+
+1.  Buka [GitHub Developer Settings](https://github.com/settings/developers) di tab browser baru.
+2.  Klik **"New OAuth App"**.
+3.  Isi formulir:
+    *   **Application name**: Beri nama aplikasi Anda (misalnya, "COMICKU App").
+    *   **Homepage URL**: Masukkan URL aplikasi Anda.
+    *   **Authorization callback URL**: **Tempel URL callback** yang Anda salin dari Firebase.
+4.  Klik **"Register application"**.
+
+**Langkah 3: Dapatkan Client ID & Secret dari GitHub**
+
+1.  Setelah aplikasi Anda dibuat, GitHub akan menampilkan halaman ringkasan.
+2.  Anda akan melihat **Client ID**. Salin nilai ini.
+3.  Klik **"Generate a new client secret"**. Salin secret yang baru dibuat.
+
+**Langkah 4: Masukkan Kredensial GitHub ke Firebase**
+
+1.  Kembali ke tab browser Firebase Anda.
+2.  **Tempel Client ID** dan **Client Secret** yang Anda dapatkan dari GitHub ke dalam kolom yang sesuai.
+3.  Klik **"Save"**.
+
+### Langkah Penting: Otorisasi Domain Anda
+
+Untuk kedua provider, Anda harus mengotorisasi domain tempat aplikasi Anda akan di-host.
+
+1.  Di Firebase Console, navigasi ke **Build > Authentication > Settings**.
+2.  Di bawah tab **"Authorized domains"**, klik **"Add domain"**.
+3.  Masukkan domain tempat aplikasi Anda akan di-host (misalnya, `nama-aplikasi-anda.vercel.app` atau domain kustom Anda).
+4.  `localhost` biasanya sudah diotorisasi secara default untuk pengujian lokal.
+
+Setelah menyelesaikan langkah-langkah ini, pengguna akan dapat masuk ke aplikasi Anda menggunakan akun Google dan GitHub mereka.
