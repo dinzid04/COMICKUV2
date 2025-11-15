@@ -19,6 +19,7 @@ import FavoritesPage from "@/pages/favorites";
 import HistoryPage from "@/pages/history";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
+import LeaderboardPage from "@/pages/leaderboard";
 import NotFound from "@/pages/not-found";
 import { ProtectedRoute } from "@/components/protected-route";
 
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/register" component={AuthPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/favorites" component={FavoritesPage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/search/:query" component={SearchPage} />
