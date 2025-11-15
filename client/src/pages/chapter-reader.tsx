@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, Home, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, Loader2, AlertCircle, Play } from "lucide-react";
 import { api, extractChapterId } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { SEO } from "@/components/seo";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
+import { AutoScrollControls } from "@/components/auto-scroll-controls";
 
 interface ManhwaState {
   manhwaId: string;
@@ -22,6 +23,10 @@ export default function ChapterReader() {
   const chapterId = params?.id || "";
   const [imageLoadErrors, setImageLoadErrors] = useState<Set<number>>(new Set());
   const [manhwaState, setManhwaState] = useState<ManhwaState | null>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState(1);
+  const [showControls, setShowControls] = useState(true);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const storedState = sessionStorage.getItem('currentManhwa');
@@ -78,6 +83,33 @@ export default function ChapterReader() {
     }
   };
 
+  const startScrolling = () => {
+    if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current);
+    scrollIntervalRef.current = setInterval(() => {
+      window.scrollBy(0, 1);
+    }, 10 / scrollSpeed);
+  };
+
+  const stopScrolling = () => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+  };
+
+  const toggleScrolling = () => {
+    setIsScrolling(prev => !prev);
+  };
+
+  useEffect(() => {
+    if (isScrolling) {
+      startScrolling();
+    } else {
+      stopScrolling();
+    }
+    return () => stopScrolling();
+  }, [isScrolling, scrollSpeed]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -108,13 +140,33 @@ export default function ChapterReader() {
         title={data.title}
         description={`Baca ${data.title} online gratis. ${data.images?.length || 0} halaman tersedia.`}
       />
+
+      {showControls ? (
+        <AutoScrollControls
+          isScrolling={isScrolling}
+          scrollSpeed={scrollSpeed}
+          onToggleScroll={toggleScrolling}
+          onSpeedChange={setScrollSpeed}
+          onHide={() => setShowControls(false)}
+        />
+      ) : (
+        <Button
+          onClick={() => setShowControls(true)}
+          className="fixed top-20 right-4 z-50"
+          size="sm"
+          data-testid="show-controls-button"
+        >
+          <Play className="h-4 w-4" />
+        </Button>
+      )}
+
       {/* Header - Fixed */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto max-w-4xl px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link 
+            <Link
               href="/"
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2" 
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2"
               data-testid="button-home"
             >
               <Home className="h-4 w-4" />
