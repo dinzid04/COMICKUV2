@@ -62,6 +62,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Aturan untuk koleksi 'leaderboard'
+    match /leaderboard/{userId} {
+      // Siapa saja bisa membaca data leaderboard
+      allow read: if true;
+      // Pengguna hanya bisa menulis data leaderboard mereka sendiri
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Aturan untuk koleksi 'quotes'
     match /quotes/{quoteId} {
       // Siapa saja bisa membaca kutipan
@@ -104,3 +112,22 @@ Untuk mengakses dasbor admin, Anda perlu menambahkan UID pengguna Anda ke dalam 
     ```
 
 Setelah menyimpan perubahan, pengguna dengan UID tersebut akan memiliki akses ke dasbor admin di `/admin`.
+
+---
+
+## Catatan Penting: Indeks Firestore untuk Papan Peringkat
+
+Fitur papan peringkat memerlukan **indeks komposit** di Firestore agar dapat mengurutkan pengguna berdasarkan jumlah bab yang dibaca (`chaptersRead`). Tanpa indeks ini, kueri akan gagal dan papan peringkat tidak akan dimuat.
+
+### Cara Membuat Indeks:
+
+1.  Buka proyek Anda di **Firebase Console**.
+2.  Navigasi ke **Build > Firestore Database > Indexes**.
+3.  Klik **"Add composite index"**.
+4.  Masukkan `leaderboard` sebagai **Collection ID**.
+5.  Tambahkan field pertama untuk diindeks:
+    *   **Field path**: `chaptersRead`
+    *   **Order**: `Descending`
+6.  Klik **"Save"**.
+
+Firebase akan mulai membuat indeks. Proses ini mungkin memakan waktu beberapa menit. Setelah indeks dibuat, papan peringkat akan berfungsi seperti yang diharapkan.
