@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, Home, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, Loader2, AlertCircle, Play, Pause, Plus, Minus, RotateCcw } from "lucide-react";
 import { api, extractChapterId } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { SEO } from "@/components/seo";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebaseConfig";
@@ -22,6 +22,9 @@ export default function ChapterReader() {
   const chapterId = params?.id || "";
   const [imageLoadErrors, setImageLoadErrors] = useState<Set<number>>(new Set());
   const [manhwaState, setManhwaState] = useState<ManhwaState | null>(null);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState(50);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const storedState = sessionStorage.getItem('currentManhwa');
@@ -59,6 +62,34 @@ export default function ChapterReader() {
       saveHistory();
     }
   }, [chapterId, user, data, manhwaState]);
+
+  // Auto-scroll logic
+  useEffect(() => {
+    if (isAutoScrolling) {
+      scrollIntervalRef.current = setInterval(() => {
+        window.scrollBy(0, 1); // scroll down by 1 pixel
+      }, 250 - scrollSpeed); // Adjust interval based on speed
+
+      // Stop when reaching the bottom of the page
+      const handleScroll = () => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 2) {
+          setIsAutoScrolling(false);
+        }
+      };
+      window.addEventListener('scroll', handleScroll);
+
+      return () => {
+        if (scrollIntervalRef.current) {
+          clearInterval(scrollIntervalRef.current);
+        }
+        window.removeEventListener('scroll', handleScroll);
+      };
+    } else {
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+    }
+  }, [isAutoScrolling, scrollSpeed]);
 
   const handleImageError = (index: number) => {
     setImageLoadErrors(prev => new Set(prev).add(index));
@@ -160,6 +191,19 @@ export default function ChapterReader() {
       {/* Navigation - Fixed Bottom */}
       <div className="sticky bottom-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border">
         <div className="container mx-auto max-w-4xl px-4 py-4">
+          {isAutoScrolling && (
+            <div className="flex items-center justify-center gap-4 mb-4" data-testid="auto-scroll-controls">
+              <Button onClick={() => setScrollSpeed(s => Math.max(10, s - 10))} variant="outline" size="sm" className="gap-2">
+                <Minus className="h-4 w-4" /> Lambat
+              </Button>
+              <Button onClick={() => setScrollSpeed(50)} variant="outline" size="sm" className="gap-2">
+                <RotateCcw className="h-4 w-4" /> Reset
+              </Button>
+              <Button onClick={() => setScrollSpeed(s => Math.min(200, s + 10))} variant="outline" size="sm" className="gap-2">
+                <Plus className="h-4 w-4" /> Cepat
+              </Button>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-4">
             <Button
               onClick={handlePrevChapter}
@@ -172,8 +216,16 @@ export default function ChapterReader() {
               <span className="hidden sm:inline">Previous</span>
             </Button>
 
-            <div className="text-center flex-1">
-              <p className="text-sm text-muted-foreground">
+            <div className="text-center flex-1 flex flex-col items-center">
+              <Button
+                onClick={() => setIsAutoScrolling(prev => !prev)}
+                variant="ghost"
+                className="gap-2"
+                data-testid="button-auto-scroll"
+              >
+                {isAutoScrolling ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </Button>
+              <p className="text-sm text-muted-foreground -mt-1">
                 {data.images?.length || 0} halaman
               </p>
             </div>
