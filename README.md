@@ -77,6 +77,20 @@ service cloud.firestore {
       // Hanya pengguna yang sudah login yang bisa menulis (menambah/menghapus)
       allow write: if request.auth != null;
     }
+
+    // Aturan untuk koleksi 'comments'
+    match /comments/{commentId} {
+      // Siapa pun dapat membaca komentar
+      allow read: if true;
+
+      // Pengguna yang sudah login dapat membuat komentar
+      // dan hanya bisa mengedit atau menghapus komentarnya sendiri.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.commentText is string
+                    && request.resource.data.commentText.size() > 0;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
   }
 }
 ```
