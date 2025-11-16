@@ -11,6 +11,7 @@ import { doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import CommentSection from "@/components/CommentSection";
 
 export default function ManhwaDetail() {
   const [, params] = useRoute("/manhwa/:id");
@@ -247,6 +248,11 @@ export default function ManhwaDetail() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Comment Section */}
+      <div className="container mx-auto max-w-7xl px-4 py-12">
+        <CommentSection comicSlug={manhwaId} />
       </div>
     </div>
   );

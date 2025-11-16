@@ -14,11 +14,15 @@ import SearchPage from "@/pages/search";
 import ManhwaDetail from "@/pages/manhwa-detail";
 import ChapterReader from "@/pages/chapter-reader";
 import ManhwaListPage from "@/pages/manhwa-list";
+import AzListPage from "@/pages/az-list";
+import GenreListPage from "@/pages/genre-list";
+import GenreDetailPage from "@/pages/genre-detail";
 import AuthPage from "@/pages/auth";
 import HistoryPage from "@/pages/history";
 import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
 import LeaderboardPage from "@/pages/leaderboard";
+import RoomChat from "@/pages/RoomChat";
 import NotFound from "@/pages/not-found";
 import { ProtectedRoute } from "@/components/protected-route";
 
@@ -30,10 +34,14 @@ function Router() {
         <ProtectedRoute component={AdminPage} />
       </Route>
       <Route path="/list/:type" component={ManhwaListPage} />
+      <Route path="/az-list/:letter" component={AzListPage} />
+      <Route path="/genres" component={GenreListPage} />
+      <Route path="/genre/:name" component={GenreDetailPage} />
       <Route path="/login" component={AuthPage} />
       <Route path="/register" component={AuthPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
+      <Route path="/room-chat" component={RoomChat} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/search/:query" component={SearchPage} />
       <Route path="/manhwa/:id" component={ManhwaDetail} />
