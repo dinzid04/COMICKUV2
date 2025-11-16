@@ -77,11 +77,66 @@ service cloud.firestore {
       // Hanya pengguna yang sudah login yang bisa menulis (menambah/menghapus)
       allow write: if request.auth != null;
     }
+
+    // Aturan untuk koleksi 'comments'
+    match /comments/{commentId} {
+      // Siapa pun dapat membaca komentar
+      allow read: if true;
+
+      // Pengguna yang sudah login dapat membuat komentar
+      // dan hanya bisa mengedit atau menghapus komentarnya sendiri.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.commentText is string
+                    && request.resource.data.commentText.size() > 0;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Aturan untuk Room Chat
+    match /chat_messages/{messageId} {
+      // Hanya pengguna yang sudah login yang dapat membaca dan mengirim pesan
+      allow read, create: if request.auth != null;
+      // Pengguna hanya bisa mengedit atau menghapus pesannya sendiri
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Aturan untuk profil pengguna publik (untuk fitur @mention)
+    match /user_profiles/{userId} {
+      // Siapa saja bisa membaca profil publik untuk menampilkan daftar mention
+      allow read: if true;
+      // Pengguna hanya bisa membuat atau mengubah profilnya sendiri
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
 ```
 
 3.  Klik **"Publish"** untuk menyimpan aturan baru. Aturan ini memastikan bahwa pengguna yang sudah login hanya dapat mengakses data mereka sendiri.
+
+### Langkah 5.1: Buat Indeks Firestore
+
+Untuk memastikan fungsionalitas komentar berjalan dengan lancar dan cepat, Anda perlu membuat *index* komposit di Firestore. Tanpa *index* ini, *query* untuk mengambil dan mengurutkan komentar akan gagal, menyebabkan komentar tidak muncul setelah halaman disegarkan.
+
+1.  Di Firebase Console, buka **Build > Firestore Database**.
+2.  Pilih tab **"Indexes"**.
+3.  Klik **"Composite"** lalu **"Create index"**.
+4.  Isi formulir dengan detail berikut:
+    *   **Collection ID**: `comments`
+    *   **Fields to index**:
+        1.  `comicSlug` - `Ascending`
+        2.  `createdAt` - `Descending`
+    *   **Query scopes**: `Collection`
+5.  Klik **"Create"**. Pembuatan *index* mungkin memerlukan beberapa menit. Setelah selesai, masalah komentar yang hilang akan teratasi.
+
+Anda juga perlu membuat *index* lain untuk fitur **Room Chat**:
+
+1.  Klik **"Create index"** lagi.
+2.  Isi formulir dengan detail berikut:
+    *   **Collection ID**: `chat_messages`
+    *   **Fields to index**:
+        1.  `createdAt` - `Ascending`
+    *   **Query scopes**: `Collection`
+3.  Klik **"Create"**. *Index* ini memastikan pesan di *room chat* dapat diambil dan diurutkan berdasarkan waktu dengan efisien.
 
 ### Langkah 6: Masukkan Konfigurasi Firebase ke Aplikasi
 
