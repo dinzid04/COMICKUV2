@@ -77,11 +77,40 @@ service cloud.firestore {
       // Hanya pengguna yang sudah login yang bisa menulis (menambah/menghapus)
       allow write: if request.auth != null;
     }
+
+    // Aturan untuk koleksi 'comments'
+    match /comments/{commentId} {
+      // Siapa pun dapat membaca komentar
+      allow read: if true;
+
+      // Pengguna yang sudah login dapat membuat komentar
+      // dan hanya bisa mengedit atau menghapus komentarnya sendiri.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.commentText is string
+                    && request.resource.data.commentText.size() > 0;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
   }
 }
 ```
 
 3.  Klik **"Publish"** untuk menyimpan aturan baru. Aturan ini memastikan bahwa pengguna yang sudah login hanya dapat mengakses data mereka sendiri.
+
+### Langkah 5.1: Buat Indeks Firestore
+
+Untuk memastikan fungsionalitas komentar berjalan dengan lancar dan cepat, Anda perlu membuat *index* komposit di Firestore. Tanpa *index* ini, *query* untuk mengambil dan mengurutkan komentar akan gagal, menyebabkan komentar tidak muncul setelah halaman disegarkan.
+
+1.  Di Firebase Console, buka **Build > Firestore Database**.
+2.  Pilih tab **"Indexes"**.
+3.  Klik **"Composite"** lalu **"Create index"**.
+4.  Isi formulir dengan detail berikut:
+    *   **Collection ID**: `comments`
+    *   **Fields to index**:
+        1.  `comicSlug` - `Ascending`
+        2.  `createdAt` - `Descending`
+    *   **Query scopes**: `Collection`
+5.  Klik **"Create"**. Pembuatan *index* mungkin memerlukan beberapa menit. Setelah selesai, masalah komentar yang hilang akan teratasi.
 
 ### Langkah 6: Masukkan Konfigurasi Firebase ke Aplikasi
 
