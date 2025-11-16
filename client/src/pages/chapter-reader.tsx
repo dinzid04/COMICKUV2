@@ -92,15 +92,15 @@ export default function ChapterReader() {
   };
 
   const handlePrevChapter = () => {
-    if (data?.prevSlug) {
-      const prevId = extractChapterId(data.prevSlug);
+    if (data?.navigation.prev) {
+      const prevId = extractChapterId(data.navigation.prev);
       navigate(`/chapter/${prevId}`);
     }
   };
 
   const handleNextChapter = () => {
-    if (data?.nextSlug) {
-      const nextId = extractChapterId(data.nextSlug);
+    if (data?.navigation.next) {
+      const nextId = extractChapterId(data.navigation.next);
       navigate(`/chapter/${nextId}`);
     }
   };
@@ -239,7 +239,7 @@ export default function ChapterReader() {
           <div className="flex items-center justify-between gap-4">
             <Button
               onClick={handlePrevChapter}
-              disabled={!data.prevSlug}
+              disabled={!data.navigation.prev}
               variant="outline"
               className="gap-2 flex-1 sm:flex-none"
               data-testid="button-prev-chapter"
@@ -256,7 +256,7 @@ export default function ChapterReader() {
 
             <Button
               onClick={handleNextChapter}
-              disabled={!data.nextSlug}
+              disabled={!data.navigation.next}
               className="gap-2 flex-1 sm:flex-none"
               data-testid="button-next-chapter"
             >

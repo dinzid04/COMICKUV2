@@ -99,6 +99,33 @@ export interface SearchResponse {
   seriesList: SearchResult[];
 }
 
+// For Genre lists
+export interface Genre {
+  label: string;
+  value: string;
+}
+
+export interface GenreListResponse {
+  creator: string;
+  success: boolean;
+  genres: Genre[];
+}
+
+export interface ManhwaByGenreItem {
+  title: string;
+  slug: string;
+  image: string;
+  latestChapter: string;
+  rating: string;
+}
+
+export interface ManhwaByGenreResponse {
+  creator: string;
+  success: boolean;
+  seriesList: ManhwaByGenreItem[];
+  nextPage?: string | null;
+}
+
 // For User Profile
 export interface User {
   uid: string;
@@ -115,4 +142,24 @@ export interface User {
     other?: string;
   };
   chaptersRead?: number;
+  verification?: 'verified' | 'admin' | null;
+}
+
+// For Comments
+export interface Comment {
+  userId: string;
+  commentText: string;
+  createdAt: any; // Firestore Timestamp
+  displayName: string;
+  photoURL?: string;
+}
+
+// For Room Chat
+export interface ChatMessage {
+  userId: string;
+  text: string;
+  createdAt: any; // Firestore Timestamp
+  displayName: string;
+  photoURL?: string;
+  mentions?: string[]; // Array of user UIDs
 }

@@ -57,9 +57,23 @@ Aturan keamanan sangat penting untuk melindungi data Anda.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Pengguna hanya bisa membaca/menulis data mereka sendiri
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Aturan untuk data pengguna
+    match /users/{userId} {
+      // Siapa saja yang login dapat membaca profil pengguna lain
+      allow read: if request.auth != null;
+
+      // Pengguna dapat menulis ke profil mereka sendiri,
+      // ATAU admin dapat menulis ke profil pengguna mana pun.
+      allow write: if request.auth != null &&
+        (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Aturan untuk koleksi admin (untuk mengelola siapa yang dapat memverifikasi pengguna)
+    match /admins/{userId} {
+      // Hanya admin lain yang bisa melihat daftar admin
+      allow read: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      // Koleksi admin hanya boleh dikelola dari Firebase Console, bukan dari aplikasi
+      allow write: if false;
     }
 
     // Aturan untuk koleksi 'leaderboard'
@@ -77,11 +91,66 @@ service cloud.firestore {
       // Hanya pengguna yang sudah login yang bisa menulis (menambah/menghapus)
       allow write: if request.auth != null;
     }
+
+    // Aturan untuk koleksi 'comments'
+    match /comments/{commentId} {
+      // Siapa pun dapat membaca komentar
+      allow read: if true;
+
+      // Pengguna yang sudah login dapat membuat komentar
+      // dan hanya bisa mengedit atau menghapus komentarnya sendiri.
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.commentText is string
+                    && request.resource.data.commentText.size() > 0;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Aturan untuk Room Chat
+    match /chat_messages/{messageId} {
+      // Hanya pengguna yang sudah login yang dapat membaca dan mengirim pesan
+      allow read, create: if request.auth != null;
+      // Pengguna hanya bisa mengedit atau menghapus pesannya sendiri
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Aturan untuk profil pengguna publik (untuk fitur @mention)
+    match /user_profiles/{userId} {
+      // Siapa saja bisa membaca profil publik untuk menampilkan daftar mention
+      allow read: if true;
+      // Pengguna hanya bisa membuat atau mengubah profilnya sendiri
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
 ```
 
 3.  Klik **"Publish"** untuk menyimpan aturan baru. Aturan ini memastikan bahwa pengguna yang sudah login hanya dapat mengakses data mereka sendiri.
+
+### Langkah 5.1: Buat Indeks Firestore
+
+Untuk memastikan fungsionalitas komentar berjalan dengan lancar dan cepat, Anda perlu membuat *index* komposit di Firestore. Tanpa *index* ini, *query* untuk mengambil dan mengurutkan komentar akan gagal, menyebabkan komentar tidak muncul setelah halaman disegarkan.
+
+1.  Di Firebase Console, buka **Build > Firestore Database**.
+2.  Pilih tab **"Indexes"**.
+3.  Klik **"Composite"** lalu **"Create index"**.
+4.  Isi formulir dengan detail berikut:
+    *   **Collection ID**: `comments`
+    *   **Fields to index**:
+        1.  `comicSlug` - `Ascending`
+        2.  `createdAt` - `Descending`
+    *   **Query scopes**: `Collection`
+5.  Klik **"Create"**. Pembuatan *index* mungkin memerlukan beberapa menit. Setelah selesai, masalah komentar yang hilang akan teratasi.
+
+Anda juga perlu membuat *index* lain untuk fitur **Room Chat**:
+
+1.  Klik **"Create index"** lagi.
+2.  Isi formulir dengan detail berikut:
+    *   **Collection ID**: `chat_messages`
+    *   **Fields to index**:
+        1.  `createdAt` - `Ascending`
+    *   **Query scopes**: `Collection`
+3.  Klik **"Create"**. *Index* ini memastikan pesan di *room chat* dapat diambil dan diurutkan berdasarkan waktu dengan efisien.
 
 ### Langkah 6: Masukkan Konfigurasi Firebase ke Aplikasi
 
@@ -112,6 +181,23 @@ Untuk mengakses dasbor admin, Anda perlu menambahkan UID pengguna Anda ke dalam 
     ```
 
 Setelah menyimpan perubahan, pengguna dengan UID tersebut akan memiliki akses ke dasbor admin di `/admin`.
+
+### Langkah 7: Siapkan Koleksi Admin untuk Verifikasi Pengguna
+
+Fitur verifikasi pengguna (centang biru/lencana admin) dikelola melalui koleksi khusus di Firestore.
+
+1.  **Buat Koleksi `admins`**:
+    *   Di Firebase Console, buka **Firestore Database**.
+    *   Klik **"Start collection"**.
+    *   Masukkan `admins` sebagai **Collection ID**.
+
+2.  **Tambahkan Admin Pertama Anda**:
+    *   Klik **"Add document"**.
+    *   Untuk **Document ID**, gunakan UID pengguna yang ingin Anda jadikan admin (Anda bisa mendapatkannya dari tab **Authentication**).
+    *   Untuk *field* di dalam dokumen, tambahkan *field* `isAdmin` dengan tipe `Boolean` dan atur nilainya ke `true`. Dokumennya bisa dibiarkan kosong jika Anda mau; yang penting adalah keberadaan dokumen dengan ID yang benar.
+    *   Ulangi proses ini untuk setiap pengguna yang ingin Anda berikan hak admin.
+
+Pendekatan ini lebih aman daripada menyimpan daftar UID admin di dalam kode aplikasi dan memungkinkan Anda mengelola admin secara dinamis langsung dari Firebase Console.
 
 ---
 
