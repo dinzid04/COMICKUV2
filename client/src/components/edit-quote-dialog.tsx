@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Quote } from '../pages/admin';
+import { Quote } from './admin/quote-management';
 import { BorderSelectionDialog } from './border-selection-dialog';
 
 interface EditQuoteDialogProps {
