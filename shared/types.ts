@@ -76,14 +76,13 @@ export interface ManhwaDetail {
 
 // For Chapter page
 export interface ChapterData {
+  chapterId?: string; // Added for offline storage key
   creator: string;
   success: boolean;
   title: string;
   images: string[];
-  navigation: {
-    next: string | null;
-    prev: string | null;
-  };
+  prevSlug: string | null;
+  nextSlug: string | null;
 }
 
 // For Search results
@@ -97,6 +96,33 @@ export interface SearchResult {
 
 export interface SearchResponse {
   seriesList: SearchResult[];
+}
+
+// For Genre lists
+export interface Genre {
+  label: string;
+  value: string;
+}
+
+export interface GenreListResponse {
+  creator: string;
+  success: boolean;
+  genres: Genre[];
+}
+
+export interface ManhwaByGenreItem {
+  title: string;
+  slug: string;
+  image: string;
+  latestChapter: string;
+  rating: string;
+}
+
+export interface ManhwaByGenreResponse {
+  creator: string;
+  success: boolean;
+  seriesList: ManhwaByGenreItem[];
+  nextPage?: string | null;
 }
 
 // For User Profile
@@ -115,4 +141,24 @@ export interface User {
     other?: string;
   };
   chaptersRead?: number;
+  verification?: 'verified' | 'admin' | null;
+}
+
+// For Comments
+export interface Comment {
+  userId: string;
+  commentText: string;
+  createdAt: any; // Firestore Timestamp
+  displayName: string;
+  photoURL?: string;
+}
+
+// For Room Chat
+export interface ChatMessage {
+  userId: string;
+  text: string;
+  createdAt: any; // Firestore Timestamp
+  displayName: string;
+  photoURL?: string;
+  mentions?: string[]; // Array of user UIDs
 }

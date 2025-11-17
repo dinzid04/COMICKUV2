@@ -16,6 +16,7 @@ import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase
 import { useToast } from '@/hooks/use-toast';
 import { User } from 'shared/types'; // Assuming types are in shared
 import { MessageSquare, Github, Instagram, Music } from 'lucide-react';
+import VerificationBadge from '@/components/ui/verification-badge';
 
 const profileSchema = z.object({
   nickname: z.string().min(3, 'Nickname must be at least 3 characters').max(20, 'Nickname must be at most 20 characters'),
@@ -191,7 +192,10 @@ const ProfilePage: React.FC = () => {
             </label>
           </div>
           <div className="ml-4">
-            <h1 className="text-3xl font-bold">{userData?.nickname || 'User'}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold">{userData?.nickname || 'User'}</h1>
+              <VerificationBadge verification={userData?.verification} />
+            </div>
             <p className="text-muted-foreground">{user.email}</p>
           </div>
           <Button variant="outline" size="icon" className="ml-auto" onClick={() => setIsEditing(!isEditing)}>
