@@ -5,6 +5,8 @@ import type {
   ManhwaDetail,
   ChapterData,
   SearchResponse,
+  GenreListResponse,
+  ManhwaByGenreResponse,
 } from "@shared/types";
 
 const BASE_URL = "https://www.sankavollerei.com/comic/komikstation";
@@ -70,8 +72,14 @@ export const api = {
   // Get manhwa detail
   getManhwaDetail: async (manhwaId: string): Promise<ManhwaDetail> => {
     const response = await fetch(`${BASE_URL}/manga/${manhwaId}`);
-    if (!response.ok) throw new Error("Failed to fetch manhwa details");
-    return response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch manhwa details. Status: ${response.status}`);
+    }
+    try {
+      return await response.json();
+    } catch (e) {
+      throw new Error("Failed to parse JSON response.");
+    }
   },
 
   // Get chapter data
@@ -85,6 +93,27 @@ export const api = {
   searchManhwa: async (query: string): Promise<SearchResponse> => {
     const response = await fetch(`${BASE_URL}/search/${encodeURIComponent(query)}`);
     if (!response.ok) throw new Error("Failed to search manhwa");
+    return response.json();
+  },
+
+  // Get manhwa by A-Z
+  getManhwaByAz: async (letter: string, page = 1): Promise<ManhwaListResponse> => {
+    const response = await fetch(`${BASE_URL}/az-list/${letter}?page=${page}`);
+    if (!response.ok) throw new Error(`Failed to fetch manhwa for letter ${letter}`);
+    return response.json();
+  },
+
+  // Get genre list
+  getGenres: async (): Promise<GenreListResponse> => {
+    const response = await fetch(`${BASE_URL}/genres`);
+    if (!response.ok) throw new Error("Failed to fetch genres");
+    return response.json();
+  },
+
+  // Get manhwa by genre
+  getManhwaByGenre: async (genre: string): Promise<ManhwaByGenreResponse> => {
+    const response = await fetch(`${BASE_URL}/genre/${genre}`);
+    if (!response.ok) throw new Error(`Failed to fetch manhwa for genre ${genre}`);
     return response.json();
   },
 };

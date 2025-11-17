@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import axios from 'axios';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -34,6 +35,24 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+app.get('/api/image-proxy', async (req, res) => {
+    const imageUrl = req.query.url as string;
+    if (!imageUrl) {
+        return res.status(400).send('Image URL is required');
+    }
+
+    try {
+        const response = await axios.get(imageUrl, {
+            responseType: 'arraybuffer'
+        });
+        const imageBase64 = Buffer.from(response.data, 'binary').toString('base64');
+        const mimeType = response.headers['content-type'];
+        res.json({ base64: `data:${mimeType};base64,${imageBase64}` });
+    } catch (error) {
+        res.status(500).send('Failed to fetch image');
+    }
 });
 
 (async () => {

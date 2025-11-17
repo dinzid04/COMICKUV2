@@ -5,6 +5,7 @@ import { collection, query, getDocs } from 'firebase/firestore';
 import { SEO } from '@/components/seo';
 import { Loader2, AlertCircle, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Link } from 'wouter';
 
 interface LeaderboardUser {
   uid: string;
@@ -59,10 +60,11 @@ const LeaderboardPage: React.FC = () => {
 
       <div className="space-y-4">
         {leaderboard?.map((user, index) => (
-          <div key={user.uid} className="flex items-center bg-muted p-4 rounded-lg">
-            <div className="w-12 text-center text-lg font-bold">
-              {index + 1}
-            </div>
+            <Link key={user.uid} href={`/profile/${user.uid}`}>
+                <a className="flex items-center bg-muted p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                    <div className="w-12 text-center text-lg font-bold">
+                        {index + 1}
+                    </div>
             <Avatar className="h-12 w-12 mx-4">
               <AvatarImage src={user.photoUrl} alt={user.nickname} />
               <AvatarFallback>{user.nickname?.charAt(0)}</AvatarFallback>
@@ -73,7 +75,8 @@ const LeaderboardPage: React.FC = () => {
             <div className="text-lg font-bold">
               {user.chaptersRead}
             </div>
-          </div>
+                </a>
+            </Link>
         ))}
       </div>
     </div>

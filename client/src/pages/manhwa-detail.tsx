@@ -11,6 +11,8 @@ import { doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import CommentSection from "@/components/CommentSection";
+import DownloadChapterButton from "@/components/download-chapter-button";
 
 export default function ManhwaDetail() {
   const [, params] = useRoute("/manhwa/:id");
@@ -227,17 +229,14 @@ export default function ManhwaDetail() {
           {data.chapters && data.chapters.length > 0 ? (
             <div className="divide-y divide-border">
               {data.chapters.map((chapter) => (
-                <div
-                  key={chapter.slug}
-                  onClick={() => handleChapterClick(chapter.slug)}
-                  className="flex items-center justify-between p-4 hover-elevate active-elevate-2 transition-all cursor-pointer"
-                  data-testid={`link-chapter-${chapter.slug}`}
-                >
-                  <div>
-                    <h3 className="font-semibold">{chapter.title}</h3>
-                    <p className="text-sm text-muted-foreground">{chapter.date}</p>
-                  </div>
-                  <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                <div key={chapter.slug} className="flex items-center justify-between p-4 hover-elevate active-elevate-2 transition-all">
+                    <div onClick={() => handleChapterClick(chapter.slug)} className="flex-grow cursor-pointer">
+                        <h3 className="font-semibold">{chapter.title}</h3>
+                        <p className="text-sm text-muted-foreground">{chapter.date}</p>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <DownloadChapterButton chapterId={extractChapterId(chapter.slug)} comicSlug={manhwaId} chapterTitle={chapter.title} />
+                    </div>
                 </div>
               ))}
             </div>
@@ -247,6 +246,11 @@ export default function ManhwaDetail() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Comment Section */}
+      <div className="container mx-auto max-w-7xl px-4 py-12">
+        <CommentSection comicSlug={manhwaId} />
       </div>
     </div>
   );

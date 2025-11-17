@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon } from "lucide-react";
+import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon, MessageSquare, Download, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -110,6 +110,21 @@ export function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-2">
+            <Link href="/az-list/a" data-testid="link-az-list">
+              <Button variant="ghost" className="hover-elevate active-elevate-2">
+                A-Z
+              </Button>
+            </Link>
+            <Link href="/genres" data-testid="link-genres">
+              <Button variant="ghost" className="hover-elevate active-elevate-2">
+                Genre
+              </Button>
+            </Link>
+            <Link href="/room-chat" data-testid="link-room-chat">
+              <Button variant="ghost" className="hover-elevate active-elevate-2">
+                Room Chat
+              </Button>
+            </Link>
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -139,6 +154,14 @@ export function Header() {
                   <DropdownMenuItem onClick={() => navigate('/history')}>
                     <History className="mr-2 h-4 w-4" />
                     <span>Riwayat</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/downloads')}>
+                    <Download className="mr-2 h-4 w-4" />
+                    <span>Downloads</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    <span>Bookmarks</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
@@ -232,6 +255,15 @@ export function Header() {
               )}
             </div>
             <div className="flex flex-col gap-2">
+              <Link href="/az-list/a" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
+                <BookOpen className="mr-2 h-5 w-5" /> Daftar A-Z
+              </Link>
+              <Link href="/genres" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
+                <BookOpen className="mr-2 h-5 w-5" /> Genre
+              </Link>
+              <Link href="/room-chat" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
+                <MessageSquare className="mr-2 h-5 w-5" /> Room Chat
+              </Link>
               {user ? (
                 <>
                   <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
@@ -242,6 +274,12 @@ export function Header() {
                   </Link>
                   <Link href="/history" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
                     <History className="mr-2 h-5 w-5" /> Riwayat
+                  </Link>
+                  <Link href="/downloads" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
+                    <Download className="mr-2 h-5 w-5" /> Downloads
+                  </Link>
+                  <Link href="/bookmarks" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
+                    <Bookmark className="mr-2 h-5 w-5" /> Bookmarks
                   </Link>
                 </>
               ) : null}
