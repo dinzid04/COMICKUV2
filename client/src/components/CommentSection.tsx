@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Link } from 'wouter';
 
 import VerificationBadge from '@/components/ui/verification-badge';
 
@@ -132,14 +133,18 @@ const CommentSection: React.FC<CommentSectionProps> = ({ comicSlug }) => {
       <div className="space-y-6">
         {comments.map(comment => (
           <div key={comment.id} className="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <img
-              src={comment.photoURL || "https://avatar.vercel.sh/fallback.png"}
-              alt={comment.displayName}
-              className="w-12 h-12 rounded-full"
-            />
+            <Link to={`/profile/${comment.userId}`}>
+              <img
+                src={comment.photoURL || "https://avatar.vercel.sh/fallback.png"}
+                alt={comment.displayName}
+                className="w-12 h-12 rounded-full cursor-pointer"
+              />
+            </Link>
             <div className="flex-1">
               <div className="flex items-center space-x-2">
-                <p className="font-bold text-lg text-gray-900 dark:text-white">{comment.displayName}</p>
+                <Link to={`/profile/${comment.userId}`}>
+                  <a className="font-bold text-lg text-gray-900 dark:text-white hover:underline">{comment.displayName}</a>
+                </Link>
                 <VerificationBadge verification={comment.verification} />
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {comment.createdAt ? formatRelativeTime(comment.createdAt.toDate()) : ''}

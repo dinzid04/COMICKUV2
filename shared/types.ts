@@ -141,6 +141,16 @@ export interface User {
   };
   chaptersRead?: number;
   verification?: 'verified' | 'admin' | null;
+  followersCount?: number;
+  followingCount?: number;
+}
+
+// For MyFavorite
+export interface MyFavorite {
+  comicSlug: string;
+  title: string;
+  imageSrc: string;
+  addedAt: any; // Firestore Timestamp
 }
 
 // For Comments

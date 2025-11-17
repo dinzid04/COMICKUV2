@@ -10,6 +10,7 @@ import { User } from '@shared/types';
 import DOMPurify from 'dompurify';
 import VerificationBadge from '@/components/ui/verification-badge';
 import ChatHeader from '@/components/chat-header';
+import { Link } from 'wouter';
 
 interface ChatMessage {
   id: string;
@@ -134,11 +135,17 @@ const RoomChat: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.map(msg => (
           <div key={msg.id} className={`flex items-start gap-4 ${msg.userId === user?.uid ? 'justify-end' : ''}`}>
-             {msg.userId !== user?.uid && <img src={msg.photoURL || "https://avatar.vercel.sh/fallback.png"} alt={msg.displayName} className="w-10 h-10 rounded-full" />}
+            {msg.userId !== user?.uid && (
+              <Link to={`/profile/${msg.userId}`}>
+                <img src={msg.photoURL || "https://avatar.vercel.sh/fallback.png"} alt={msg.displayName} className="w-10 h-10 rounded-full cursor-pointer" />
+              </Link>
+            )}
             <div className={`flex flex-col ${msg.userId === user?.uid ? 'items-end' : 'items-start'}`}>
               <div className={`max-w-md p-3 rounded-2xl ${msg.userId === user?.uid ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold text-sm">{msg.displayName}</p>
+                  <Link to={`/profile/${msg.userId}`}>
+                    <a className="font-semibold text-sm hover:underline">{msg.displayName}</a>
+                  </Link>
                   <VerificationBadge verification={msg.verification} />
                 </div>
                 <p dangerouslySetInnerHTML={{ __html: highlightMentions(msg.text) }}></p>

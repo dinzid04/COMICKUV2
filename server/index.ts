@@ -1,6 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import admin from "firebase-admin";
+
+// Initialize Firebase Admin SDK
+// Make sure to set up Google Application Credentials for local development
+// export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/service-account-file.json"
+try {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+  });
+  log("Firebase Admin SDK initialized successfully.");
+} catch (error) {
+  log("Error initializing Firebase Admin SDK:", error);
+}
 
 const app = express();
 app.use(express.json());
