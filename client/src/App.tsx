@@ -39,7 +39,7 @@ function Router() {
       <Route path="/genre/:name" component={GenreDetailPage} />
       <Route path="/login" component={AuthPage} />
       <Route path="/register" component={AuthPage} />
-      <Route path="/profile" component={ProfilePage} />
+      <Route path="/profile/:userId?" component={ProfilePage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/room-chat" component={RoomChat} />
       <Route path="/history" component={HistoryPage} />

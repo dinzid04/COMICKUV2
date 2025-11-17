@@ -129,3 +129,43 @@ export const extractChapterId = (slug: string): string => {
   const parts = slug.split('/').filter(part => part);
   return parts[parts.length - 1] || slug;
 };
+
+// --- User Profile and Follow/Unfollow API ---
+
+const API_BASE_URL = '/api'; // Using relative path for API calls
+
+export const getUserProfile = async (userId: string) => {
+  const response = await fetch(`${API_BASE_URL}/users/${userId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch user profile');
+  }
+  return response.json();
+};
+
+export const followUser = async (targetUserId: string, currentUserId: string) => {
+  const response = await fetch(`${API_BASE_URL}/users/${targetUserId}/follow`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ currentUserId }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to follow user');
+  }
+  return response.json();
+};
+
+export const unfollowUser = async (targetUserId: string, currentUserId: string) => {
+  const response = await fetch(`${API_BASE_URL}/users/${targetUserId}/unfollow`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ currentUserId }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to unfollow user');
+  }
+  return response.json();
+};

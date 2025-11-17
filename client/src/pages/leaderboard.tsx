@@ -5,6 +5,7 @@ import { collection, query, getDocs } from 'firebase/firestore';
 import { SEO } from '@/components/seo';
 import { Loader2, AlertCircle, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Link } from 'wouter';
 
 interface LeaderboardUser {
   uid: string;
@@ -68,7 +69,9 @@ const LeaderboardPage: React.FC = () => {
               <AvatarFallback>{user.nickname?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="font-semibold">{user.nickname}</p>
+              <Link to={`/profile/${user.uid}`}>
+                <a className="font-semibold hover:underline">{user.nickname}</a>
+              </Link>
             </div>
             <div className="text-lg font-bold">
               {user.chaptersRead}
