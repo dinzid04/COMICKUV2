@@ -64,11 +64,12 @@ const ProfilePage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!userId) return;
+    const profileIdToFetch = userId || currentUser?.uid;
+    if (!profileIdToFetch) return;
 
     const fetchProfileData = async () => {
       try {
-        const profileData = await getUserProfile(userId);
+        const profileData = await getUserProfile(profileIdToFetch);
         setUserData(profileData);
         setFavorites(profileData.favorites || []);
         if (isOwnProfile) {
@@ -280,7 +281,7 @@ const ProfilePage: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">Favorites</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {favorites.map(fav => (
-                  <Link key={fav.comicSlug} to={`/manhwa/${fav.comicSlug}`}>
+                  <Link key={fav.slug} to={`/manhwa/${fav.slug}`}>
                     <div className="group">
                       <img src={fav.imageSrc} alt={fav.title} className="w-full h-auto object-cover rounded-md mb-2 transition-transform duration-300 group-hover:scale-105" />
                       <p className="text-sm font-semibold truncate">{fav.title}</p>

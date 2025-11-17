@@ -21,7 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const favoritesSnapshot = await admin.firestore()
         .collection("users")
         .doc(id)
-        .collection("my-favorites")
+        .collection("favorites")
         .orderBy("addedAt", "desc")
         .get();
 

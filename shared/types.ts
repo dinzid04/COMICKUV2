@@ -147,7 +147,7 @@ export interface User {
 
 // For MyFavorite
 export interface MyFavorite {
-  comicSlug: string;
+  slug: string;
   title: string;
   imageSrc: string;
   addedAt: any; // Firestore Timestamp
