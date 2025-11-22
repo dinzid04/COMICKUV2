@@ -26,10 +26,23 @@ import RoomChat from "@/pages/RoomChat";
 import NotFound from "@/pages/not-found";
 import { ProtectedRoute } from "@/components/protected-route";
 
+// Anime Pages
+import AnimeHome from "@/pages/anime-home";
+import AnimeList from "@/pages/anime-list";
+import AnimeDetail from "@/pages/anime-detail";
+import AnimeStream from "@/pages/anime-stream";
+import AnimeSearch from "@/pages/anime-search";
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/anime" component={AnimeHome} />
+      <Route path="/anime/list/:type" component={AnimeList} />
+      <Route path="/anime/list/:type/:page" component={AnimeList} />
+      <Route path="/anime/detail/:id/:slug" component={AnimeDetail} />
+      <Route path="/anime/stream/:id/:slug/:episode" component={AnimeStream} />
+      <Route path="/anime/search" component={AnimeSearch} />
       <Route path="/admin">
         <ProtectedRoute component={AdminPage} />
       </Route>

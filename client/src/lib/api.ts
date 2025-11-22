@@ -8,10 +8,72 @@ import type {
   GenreListResponse,
   ManhwaByGenreResponse,
 } from "@shared/types";
+import type {
+  AnimeHomeResponse,
+  AnimeListResponse,
+  AnimeDetailResponse,
+  AnimeSearchResponse,
+  AnimeStreamResponse,
+} from "@shared/anime-types";
 
 const BASE_URL = "https://www.sankavollerei.com/comic/komikstation";
+const ANIME_BASE_URL = "https://www.sankavollerei.com/anime/kura";
 const BASE_GET = " https://www.sankavollerei.com/comic/bacakomik";
 export const api = {
+  // Get anime home page data
+  getAnimeHome: async (): Promise<AnimeHomeResponse> => {
+    const response = await fetch(`${ANIME_BASE_URL}/home`);
+    if (!response.ok) throw new Error("Failed to fetch anime home page data");
+    return response.json();
+  },
+  // Get anime lists with pagination
+  getAnimeOngoing: async (page = 1): Promise<AnimeListResponse> => {
+    const response = await fetch(`${ANIME_BASE_URL}/quick/ongoing?page=${page}`);
+    if (!response.ok) throw new Error("Failed to fetch ongoing anime");
+    return response.json();
+  },
+
+  getAnimeFinished: async (page = 1): Promise<AnimeListResponse> => {
+    const response = await fetch(`${ANIME_BASE_URL}/quick/finished?page=${page}`);
+    if (!response.ok) throw new Error("Failed to fetch finished anime");
+    return response.json();
+  },
+
+  getAnimeMovie: async (page = 1): Promise<AnimeListResponse> => {
+    const response = await fetch(`${ANIME_BASE_URL}/quick/movie?page=${page}`);
+    if (!response.ok) throw new Error("Failed to fetch anime movies");
+    return response.json();
+  },
+  // Get anime detail
+  getAnimeDetail: async (id: string, slug: string): Promise<AnimeDetailResponse> => {
+    const response = await fetch(`${ANIME_BASE_URL}/anime/${id}/${slug}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch anime details. Status: ${response.status}`);
+    }
+    try {
+      return await response.json();
+    } catch (e) {
+      throw new Error("Failed to parse JSON response.");
+    }
+  },
+  // Get anime stream
+  getAnimeStream: async (id: string, slug: string, episode: string): Promise<AnimeStreamResponse> => {
+    const response = await fetch(`${ANIME_BASE_URL}/watch/${id}/${slug}/${episode}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch anime stream. Status: ${response.status}`);
+    }
+    try {
+      return await response.json();
+    } catch (e) {
+      throw new Error("Failed to parse JSON response.");
+    }
+  },
+   // Search anime
+  searchAnime: async (query: string): Promise<AnimeSearchResponse> => {
+    const response = await fetch(`${ANIME_BASE_URL}/search/${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error("Failed to search anime");
+    return response.json();
+  },
   // Get home page data (trending and latest updates)
   getHomePage: async (): Promise<HomePageResponse> => {
     const response = await fetch(`${BASE_URL}/home`);

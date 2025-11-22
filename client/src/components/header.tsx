@@ -16,16 +16,21 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const isAnimePage = location.startsWith("/anime");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedQuery = searchQuery.trim();
     if (trimmedQuery) {
       addSearchHistory(trimmedQuery);
-      navigate(`/search/${encodeURIComponent(trimmedQuery)}`);
+      if (isAnimePage) {
+        navigate(`/anime/search?q=${encodeURIComponent(trimmedQuery)}`);
+      } else {
+        navigate(`/search/${encodeURIComponent(trimmedQuery)}`);
+      }
       setSearchQuery("");
       setMobileMenuOpen(false);
       setIsSearchFocused(false);
@@ -62,7 +67,7 @@ export function Header() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Cari manhwa..."
+                  placeholder={isAnimePage ? "Cari anime..." : "Cari manhwa..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => {
