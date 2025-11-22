@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { ChevronLeft, ChevronRight, Star, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { extractManhwaId } from "@/lib/api";
+import { api } from "@/lib/api";
 import type { ManhwaListItem } from "@shared/types";
 
 interface ManhwaSliderProps {
@@ -36,7 +36,7 @@ export function ManhwaSlider({ manhwaList }: ManhwaSliderProps) {
   if (displayList.length === 0) return null;
 
   const currentManhwa = displayList[currentIndex];
-  const manhwaId = extractManhwaId(currentManhwa.slug);
+  const manhwaId = api.extractManhwaId(currentManhwa.slug);
 
   return (
     <div className="relative h-[400px] md:h-[500px] w-full overflow-hidden rounded-lg">

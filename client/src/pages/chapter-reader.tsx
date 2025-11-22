@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
 import { ChevronLeft, ChevronRight, Home, Loader2, AlertCircle, Play } from "lucide-react";
-import { api, extractChapterId } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useRef } from "react";
 import { SEO } from "@/components/seo";

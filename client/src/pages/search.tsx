@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { Search as SearchIcon, AlertCircle } from "lucide-react";
-import { api, extractManhwaId } from "@/lib/api";
+import { api } from "@/lib/api";
 import { ManhwaCard, ManhwaCardSkeleton } from "@/components/manhwa-card";
 import { SEO } from "@/components/seo";
 
