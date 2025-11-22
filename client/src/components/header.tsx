@@ -110,6 +110,11 @@ export function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-2">
+            <Link href="/anime" data-testid="link-anime">
+              <Button variant="ghost" className="hover-elevate active-elevate-2">
+                Anime
+              </Button>
+            </Link>
             <Link href="/az-list/a" data-testid="link-az-list">
               <Button variant="ghost" className="hover-elevate active-elevate-2">
                 A-Z
@@ -247,6 +252,9 @@ export function Header() {
               )}
             </div>
             <div className="flex flex-col gap-2">
+              <Link href="/anime" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
+                <BookOpen className="mr-2 h-5 w-5" /> Anime
+              </Link>
               <Link href="/az-list/a" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
                 <BookOpen className="mr-2 h-5 w-5" /> Daftar A-Z
               </Link>

@@ -26,6 +26,12 @@ import RoomChat from "@/pages/RoomChat";
 import NotFound from "@/pages/not-found";
 import { ProtectedRoute } from "@/components/protected-route";
 
+// Anime Pages
+import AnimeHome from "@/pages/anime/home";
+import AnimeList from "@/pages/anime/list";
+import AnimeDetail from "@/pages/anime/detail";
+import AnimeWatch from "@/pages/anime/watch";
+
 function Router() {
   return (
     <Switch>
@@ -46,6 +52,13 @@ function Router() {
       <Route path="/search/:query" component={SearchPage} />
       <Route path="/manhwa/:id" component={ManhwaDetail} />
       <Route path="/chapter/:id" component={ChapterReader} />
+
+      {/* Anime Routes */}
+      <Route path="/anime" component={AnimeHome} />
+      <Route path="/anime/list/:type" component={AnimeList} />
+      <Route path="/anime/detail/:id/:slug" component={AnimeDetail} />
+      <Route path="/anime/watch/:id/:slug/:episode" component={AnimeWatch} />
+
       <Route component={NotFound} />
     </Switch>
   );
@@ -71,9 +84,10 @@ function App() {
 function AppLayout() {
   const [isChapterReader] = useRoute("/chapter/:id");
   const [isChatPage] = useRoute("/room-chat");
+  const [isAnimePage] = useRoute("/anime*");
 
   const showHeader = !isChapterReader && !isChatPage;
-  const showFooter = !isChapterReader && !isChatPage;
+  const showFooter = !isChapterReader && !isChatPage && !isAnimePage;
   const mainPadding = !isChapterReader && !isChatPage ? "pb-16 md:pb-0" : "";
 
 
