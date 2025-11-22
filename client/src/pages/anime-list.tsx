@@ -51,8 +51,9 @@ export default function AnimeList() {
                 id={anime.id}
                 slug={anime.slug}
                 title={anime.title}
-                imageSrc={anime.poster}
-                episode={anime.score}
+                imageSrc={anime.image}
+                episode={type === 'ongoing' ? anime.score : undefined}
+                rating={type !== 'ongoing' ? anime.score : undefined}
               />
             ))}
       </div>

@@ -35,6 +35,14 @@ export default function AnimeDetail() {
           <img src={anime.image} alt={anime.title} className="w-full md:w-1/4 h-auto object-cover rounded-lg" />
           <div className="w-full md:w-3/4">
             <h1 className="font-display text-4xl font-bold">{anime.title}</h1>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {anime.details.map((detail) => (
+                <div key={detail.type} className="text-sm">
+                  <span className="font-semibold">{detail.type}</span>
+                  <span className="text-muted-foreground">{detail.data}</span>
+                </div>
+              ))}
+            </div>
             <p className="mt-4 text-muted-foreground" dangerouslySetInnerHTML={{ __html: anime.description }} />
 
             <div className="mt-8">

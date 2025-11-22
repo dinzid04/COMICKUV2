@@ -19,14 +19,14 @@ export function Header() {
   const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
-  const isAnimePage = location.startsWith("/anime");
+  const [searchType, setSearchType] = useState<"comic" | "anime">("comic");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedQuery = searchQuery.trim();
     if (trimmedQuery) {
       addSearchHistory(trimmedQuery);
-      if (isAnimePage) {
+      if (searchType === "anime") {
         navigate(`/anime/search?q=${encodeURIComponent(trimmedQuery)}`);
       } else {
         navigate(`/search/${encodeURIComponent(trimmedQuery)}`);
@@ -67,7 +67,7 @@ export function Header() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder={isAnimePage ? "Cari anime..." : "Cari manhwa..."}
+                  placeholder={searchType === "anime" ? "Cari anime..." : "Cari komik..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => {
@@ -75,9 +75,20 @@ export function Header() {
                     setIsSearchFocused(true);
                   }}
                   onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
-                  className="w-full rounded-full pl-9 pr-4"
+                  className="w-full rounded-l-full pl-9 pr-4"
                   data-testid="input-search"
                 />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" className="rounded-r-full">
+                      {searchType === "anime" ? "Anime" : "Komik"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setSearchType("comic")}>Komik</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSearchType("anime")}>Anime</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </form>
             {isSearchFocused && searchHistory.length > 0 && (
@@ -115,6 +126,11 @@ export function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-2">
+            <Link href="/anime" data-testid="link-anime">
+              <Button variant="ghost" className="hover-elevate active-elevate-2">
+                Anime
+              </Button>
+            </Link>
             <Link href="/az-list/a" data-testid="link-az-list">
               <Button variant="ghost" className="hover-elevate active-elevate-2">
                 A-Z

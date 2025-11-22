@@ -6,6 +6,7 @@ import { SEO } from "@/components/seo";
 import { ManhwaCardSkeleton } from "@/components/manhwa-card";
 import { Button } from "@/components/ui/button";
 import { AnimeCard } from "@/components/anime-card";
+import { AnimeHero } from "@/components/anime-hero";
 
 export default function AnimeHome() {
   const { data: animeHomeData, isLoading: loadingAnimeHome } = useQuery({
@@ -13,10 +14,23 @@ export default function AnimeHome() {
     queryFn: api.getAnimeHome,
   });
 
-  const heroData = animeHomeData?.hero;
+  const { data: movieData, isLoading: loadingMovie } = useQuery({
+    queryKey: ["anime-movie-random"],
+    queryFn: () => api.getAnimeMovie(Math.floor(Math.random() * 2) + 1),
+  });
+
+  const heroData = movieData?.animes;
   const ongoing = animeHomeData?.ongoing;
   const completed = animeHomeData?.completed;
   const movie = animeHomeData?.movie;
+
+  // Fungsi untuk membersihkan URL yang diakhiri dengan titik
+  const cleanImageUrl = (url: string) => {
+    if (url.endsWith('.')) {
+      return url.slice(0, -1);
+    }
+    return url;
+  };
 
   return (
     <div className="min-h-screen">
@@ -26,10 +40,10 @@ export default function AnimeHome() {
       />
       {/* Hero Slider */}
       <section className="mb-12">
-        {loadingAnimeHome ? (
+        {loadingMovie ? (
           <div className="h-[400px] md:h-[500px] rounded-lg bg-muted animate-pulse" />
         ) : heroData && heroData.length > 0 ? (
-          <div className="h-[400px] md:h-[500px] rounded-lg bg-muted animate-pulse" />
+          <AnimeHero animes={heroData} />
         ) : null}
       </section>
 
@@ -57,7 +71,7 @@ export default function AnimeHome() {
                     id={anime.id}
                     slug={anime.slug}
                     title={anime.title}
-                    imageSrc={anime.image}
+                    imageSrc={cleanImageUrl(anime.image)}
                     episode={anime.episode}
                   />
                 ))}
@@ -87,7 +101,7 @@ export default function AnimeHome() {
                     id={anime.id}
                     slug={anime.slug}
                     title={anime.title}
-                    imageSrc={anime.image}
+                    imageSrc={cleanImageUrl(anime.image)}
                     rating={anime.rating}
                   />
                 ))}
@@ -117,7 +131,7 @@ export default function AnimeHome() {
                     id={anime.id}
                     slug={anime.slug}
                     title={anime.title}
-                    imageSrc={anime.image}
+                    imageSrc={cleanImageUrl(anime.image)}
                     rating={anime.rating}
                   />
                 ))}

@@ -64,7 +64,7 @@ export interface Anime {
   id: string;
   slug: string;
   title: string;
-  poster: string;
+  image: string;
   score: string;
   views: string;
   tags: any[];

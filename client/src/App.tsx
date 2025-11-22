@@ -84,9 +84,10 @@ function App() {
 function AppLayout() {
   const [isChapterReader] = useRoute("/chapter/:id");
   const [isChatPage] = useRoute("/room-chat");
+  const [isAnimePage] = useRoute("/anime/:rest*");
 
   const showHeader = !isChapterReader && !isChatPage;
-  const showFooter = !isChapterReader && !isChatPage;
+  const showFooter = !isChapterReader && !isChatPage && !isAnimePage;
   const mainPadding = !isChapterReader && !isChatPage ? "pb-16 md:pb-0" : "";
 
 
