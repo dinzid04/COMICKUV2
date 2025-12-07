@@ -6,7 +6,7 @@ Baca Komik lengkap hanya di Comic Ku
 
 Proyek ini telah diperbarui untuk menyertakan fitur-fitur berikut:
 
-*   **Autentikasi Pengguna**: Sistem login dan pendaftaran menggunakan Firebase Authentication.
+*   **Autentikasi Pengguna**: Sistem login dan pendaftaran menggunakan Firebase Authentication (Email/Password, Google, GitHub, dan Email Link).
 *   **Favorit**: Pengguna dapat menyimpan manhwa favorit mereka.
 *   **Riwayat Baca**: Aplikasi secara otomatis menyimpan chapter terakhir yang dibaca oleh pengguna.
 
@@ -36,7 +36,11 @@ Ikuti langkah-langkah di bawah ini untuk menghubungkan aplikasi ini ke Firebase.
 
 1.  Dari menu di sebelah kiri, buka **Build > Authentication**.
 2.  Klik **"Get started"**.
-3.  Di bawah tab **"Sign-in method"**, pilih dan aktifkan *provider* **"Email/Password"**.
+3.  Di bawah tab **"Sign-in method"**, aktifkan *provider* berikut:
+    *   **Email/Password**: Aktifkan toggle "Email/Password".
+    *   **Email Link (Passwordless Sign-in)**: Pada bagian **Email/Password**, pastikan untuk mencentang/mengaktifkan **"Email link (passwordless sign-in)"**. Ini sangat penting agar fitur "Sign Up with Email Link" berfungsi.
+    *   **Google** (Opsional, jika ingin mengaktifkan login Google).
+    *   **GitHub** (Opsional, jika ingin mengaktifkan login GitHub).
 
 ### Langkah 4: Atur Firestore Database
 
@@ -122,32 +126,7 @@ service cloud.firestore {
 }
 ```
 
-3.  Klik **"Publish"** untuk menyimpan aturan baru. Aturan ini memastikan bahwa pengguna yang sudah login hanya dapat mengakses data mereka sendiri.
-
-### Langkah 5.1: Buat Indeks Firestore
-
-Untuk memastikan fungsionalitas komentar berjalan dengan lancar dan cepat, Anda perlu membuat *index* komposit di Firestore. Tanpa *index* ini, *query* untuk mengambil dan mengurutkan komentar akan gagal, menyebabkan komentar tidak muncul setelah halaman disegarkan.
-
-1.  Di Firebase Console, buka **Build > Firestore Database**.
-2.  Pilih tab **"Indexes"**.
-3.  Klik **"Composite"** lalu **"Create index"**.
-4.  Isi formulir dengan detail berikut:
-    *   **Collection ID**: `comments`
-    *   **Fields to index**:
-        1.  `comicSlug` - `Ascending`
-        2.  `createdAt` - `Descending`
-    *   **Query scopes**: `Collection`
-5.  Klik **"Create"**. Pembuatan *index* mungkin memerlukan beberapa menit. Setelah selesai, masalah komentar yang hilang akan teratasi.
-
-Anda juga perlu membuat *index* lain untuk fitur **Room Chat**:
-
-1.  Klik **"Create index"** lagi.
-2.  Isi formulir dengan detail berikut:
-    *   **Collection ID**: `chat_messages`
-    *   **Fields to index**:
-        1.  `createdAt` - `Ascending`
-    *   **Query scopes**: `Collection`
-3.  Klik **"Create"**. *Index* ini memastikan pesan di *room chat* dapat diambil dan diurutkan berdasarkan waktu dengan efisien.
+3.  Klik **"Publish"** untuk menyimpan aturan baru.
 
 ### Langkah 6: Masukkan Konfigurasi Firebase ke Aplikasi
 
@@ -156,7 +135,21 @@ Anda juga perlu membuat *index* lain untuk fitur **Room Chat**:
 3.  Ganti nilai-nilai *placeholder* tersebut dengan objek `firebaseConfig` yang Anda salin dari Firebase pada **Langkah 2**.
 4.  Simpan file tersebut.
 
-Setelah menyelesaikan semua langkah ini, aplikasi Anda akan sepenuhnya terhubung dengan Firebase. Anda bisa menjalankan aplikasi secara lokal dan semua fitur autentikasi, favorit, dan riwayat akan berfungsi.
+Setelah menyelesaikan semua langkah ini, aplikasi Anda akan sepenuhnya terhubung dengan Firebase.
+
+---
+
+## Konfigurasi Tambahan untuk Email Link
+
+Agar fitur "Sign Up with Email Link" bekerja dengan baik, ada beberapa hal yang harus diperhatikan:
+
+1.  **Authorized Domains**:
+    *   Buka Firebase Console, lalu navigasi ke **Authentication > Settings > Authorized domains**.
+    *   Pastikan domain tempat aplikasi Anda berjalan terdaftar di sini. `localhost` sudah ada secara default. Jika Anda mendeploy aplikasi, tambahkan domain produksi Anda di sini.
+
+2.  **Redirect URL**:
+    *   Saat pengguna mengklik link di email, mereka akan diarahkan kembali ke aplikasi. Kode saat ini mengarahkan pengguna ke `{origin}/login`.
+    *   Pastikan tidak ada aturan firewall atau pengaturan server yang memblokir akses ke URL dengan parameter query.
 
 ---
 
@@ -171,30 +164,17 @@ Untuk mengakses dasbor admin, Anda perlu menambahkan UID pengguna Anda ke dalam 
 
 2.  **Tambahkan UID ke Kode**:
     *   Buka file `client/src/hooks/use-admin.ts`.
-    *   Ganti `'YOUR_ADMIN_UID_HERE'` dengan UID yang telah Anda salin. Anda bisa menambahkan beberapa UID jika diperlukan.
+    *   Ganti `'YOUR_ADMIN_UID_HERE'` dengan UID yang telah Anda salin.
 
     ```typescript
     const ADMIN_UIDS = ['UID_ADMIN_1', 'UID_ADMIN_2']; // Ganti dengan UID admin Anda
     ```
 
-Setelah menyimpan perubahan, pengguna dengan UID tersebut akan memiliki akses ke dasbor admin di `/admin`.
-
-### Langkah 7: Siapkan Koleksi Admin untuk Verifikasi Pengguna
-
-Fitur verifikasi pengguna (centang biru/lencana admin) dikelola melalui koleksi khusus di Firestore.
-
-1.  **Buat Koleksi `admins`**:
+3.  **Setup Koleksi Admin**:
     *   Di Firebase Console, buka **Firestore Database**.
-    *   Klik **"Start collection"**.
-    *   Masukkan `admins` sebagai **Collection ID**.
-
-2.  **Tambahkan Admin Pertama Anda**:
-    *   Klik **"Add document"**.
-    *   Untuk **Document ID**, gunakan UID pengguna yang ingin Anda jadikan admin (Anda bisa mendapatkannya dari tab **Authentication**).
-    *   Untuk *field* di dalam dokumen, tambahkan *field* `isAdmin` dengan tipe `Boolean` dan atur nilainya ke `true`. Dokumennya bisa dibiarkan kosong jika Anda mau; yang penting adalah keberadaan dokumen dengan ID yang benar.
-    *   Ulangi proses ini untuk setiap pengguna yang ingin Anda berikan hak admin.
-
-Pendekatan ini lebih aman daripada menyimpan daftar UID admin di dalam kode aplikasi dan memungkinkan Anda mengelola admin secara dinamis langsung dari Firebase Console.
+    *   Buat koleksi `admins`.
+    *   Buat dokumen dengan ID sama dengan UID admin.
+    *   Tambahkan field `isAdmin: true`.
 
 ---
 
@@ -202,23 +182,13 @@ Pendekatan ini lebih aman daripada menyimpan daftar UID admin di dalam kode apli
 
 Aplikasi ini mendukung login melalui Google dan GitHub. Untuk mengaktifkannya, ikuti langkah-langkah berikut di Firebase Console.
 
-### Langkah 1: Aktifkan Penyedia OAuth
+1.  **Aktifkan Penyedia OAuth**:
+    *   Buka proyek Anda di **Firebase Console**.
+    *   Navigasi ke **Build > Authentication > Sign-in method**.
+    *   Klik **"Add new provider"**.
+    *   Pilih **Google** dan aktifkan.
+    *   Ulangi proses untuk **GitHub**. Masukkan **Client ID** dan **Client secret** dari aplikasi OAuth GitHub Anda.
 
-1.  Buka proyek Anda di **Firebase Console**.
-2.  Navigasi ke **Build > Authentication > Sign-in method**.
-3.  Klik **"Add new provider"**.
-4.  Pilih **Google** dan aktifkan. Anda mungkin perlu memberikan nama proyek publik dan email dukungan.
-5.  Ulangi proses untuk **GitHub**. Anda harus memberikan **Client ID** dan **Client secret** dari aplikasi OAuth GitHub Anda.
-    *   Untuk mendapatkan kredensial ini, buat aplikasi OAuth baru di [GitHub Developer Settings](https://github.com/settings/developers).
-    *   Saat membuat aplikasi, GitHub akan meminta **Authorization callback URL**. Firebase akan menyediakan URL ini untuk Anda salin dan tempel di pengaturan aplikasi GitHub Anda.
-
-### Langkah 2: Otorisasi Domain Anda
-
-Penting untuk mengotorisasi domain tempat Anda akan menerapkan aplikasi agar Firebase dapat menangani callback OAuth dengan aman.
-
-1.  Di Firebase Console, navigasi ke **Build > Authentication > Settings**.
-2.  Di bawah tab **"Authorized domains"**, klik **"Add domain"**.
-3.  Masukkan domain tempat aplikasi Anda akan di-host (misalnya, `your-app-name.vercel.app` atau domain kustom Anda).
-4.  Jika Anda melakukan pengujian secara lokal, `localhost` biasanya sudah diotorisasi secara default.
-
-Setelah menyelesaikan langkah-langkah ini, pengguna akan dapat masuk ke aplikasi Anda menggunakan akun Google atau GitHub mereka.
+2.  **Otorisasi Domain Anda**:
+    *   Di Firebase Console, navigasi ke **Build > Authentication > Settings**.
+    *   Di bawah tab **"Authorized domains"**, tambahkan domain tempat aplikasi Anda di-host.

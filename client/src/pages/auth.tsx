@@ -7,7 +7,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   GithubAuthProvider,
-  getAdditionalUserInfo
+  getAdditionalUserInfo,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
@@ -16,13 +19,66 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { FaGoogle, FaGithub } from "react-icons/fa";
+import { FaGoogle, FaGithub, FaEnvelope } from "react-icons/fa";
 
 const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLinkSent, setIsLinkSent] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    const handleEmailLinkSignIn = async () => {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        let emailForSignIn = window.localStorage.getItem('emailForSignIn');
+
+        if (!emailForSignIn) {
+          emailForSignIn = window.prompt('Please provide your email for confirmation');
+        }
+
+        if (emailForSignIn) {
+          try {
+            const result = await signInWithEmailLink(auth, emailForSignIn, window.location.href);
+            window.localStorage.removeItem('emailForSignIn');
+
+            const user = result.user;
+            const additionalInfo = getAdditionalUserInfo(result);
+
+            if (additionalInfo?.isNewUser) {
+              const userDocRef = doc(db, "users", user.uid);
+              const leaderboardDocRef = doc(db, "leaderboard", user.uid);
+
+              const newUser = {
+                uid: user.uid,
+                email: user.email!,
+                nickname: user.displayName || 'New User',
+                photoUrl: user.photoURL || '',
+                chaptersRead: 0
+              };
+
+              await setDoc(userDocRef, newUser);
+              await setDoc(leaderboardDocRef, {
+                uid: user.uid,
+                nickname: newUser.nickname,
+                photoUrl: newUser.photoUrl,
+                chaptersRead: 0
+              });
+            }
+
+            toast({ title: 'Success', description: 'Signed in successfully with email link!' });
+            setLocation('/');
+          } catch (error: any) {
+             toast({ title: 'Error', description: error.message, variant: 'destructive' });
+             // Some error occurred, you can inspect the code: error.code
+             // Common errors could be invalid email and invalid or expired OTPs.
+          }
+        }
+      }
+    };
+
+    handleEmailLinkSignIn();
+  }, [setLocation, toast]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +86,29 @@ const AuthPage: React.FC = () => {
       await createUserWithEmailAndPassword(auth, email, password);
       toast({ title: 'Success', description: 'Account created successfully!' });
       setLocation('/');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleSendEmailLink = async () => {
+    if (!email) {
+      toast({ title: 'Error', description: 'Please enter your email first.', variant: 'destructive' });
+      return;
+    }
+
+    const actionCodeSettings = {
+      // URL you want to redirect back to. The domain (www.example.com) for this
+      // URL must be in the authorized domains list in the Firebase Console.
+      url: window.location.origin + '/login',
+      handleCodeInApp: true,
+    };
+
+    try {
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', email);
+      setIsLinkSent(true);
+      toast({ title: 'Success', description: 'Sign-in link sent to your email!' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -159,8 +238,35 @@ const AuthPage: React.FC = () => {
                   required
                 />
               </CardContent>
-              <CardFooter>
+              <CardFooter className="flex flex-col space-y-4">
                 <Button type="submit" className="w-full">Sign Up</Button>
+
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or sign up with
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleSendEmailLink}
+                  disabled={isLinkSent}
+                >
+                  <FaEnvelope className="mr-2 h-4 w-4" />
+                  {isLinkSent ? 'Link Sent!' : 'Sign Up with Email Link'}
+                </Button>
+                {isLinkSent && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Check your email for the sign-in link.
+                  </p>
+                )}
               </CardFooter>
             </form>
           </Card>
