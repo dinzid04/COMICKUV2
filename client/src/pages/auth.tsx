@@ -99,13 +99,25 @@ const AuthPage: React.FC = () => {
       handleCodeInApp: true,
     };
 
+    console.log("Sending email link with settings:", actionCodeSettings);
+
     try {
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       window.localStorage.setItem('emailForSignIn', email);
       setIsLinkSent(true);
-      toast({ title: 'Success', description: 'Sign-in link sent to your email!' });
+      toast({
+        title: 'Success',
+        description: 'Sign-in link sent! If not received, check Spam/Junk folder.'
+      });
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      console.error("Error sending email link:", error);
+      let errorMessage = error.message;
+      if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = "Email Link sign-in is not enabled in Firebase Console.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address.";
+      }
+      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     }
   };
 

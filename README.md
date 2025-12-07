@@ -156,6 +156,28 @@ Fitur pendaftaran saat ini mewajibkan verifikasi email melalui link. Agar ini be
 
 ---
 
+## Troubleshooting (Jika Email Tidak Masuk)
+
+Jika Anda telah mengklik "Sign Up with Email" namun tidak menerima email:
+
+1.  **Periksa Folder Spam/Junk**:
+    *   Email dari Firebase sering kali masuk ke folder Spam atau Junk, terutama jika Anda menggunakan domain gratis (seperti `comicku-app.firebaseapp.com`) sebagai pengirim.
+
+2.  **Periksa Quota**:
+    *   Firebase Free Tier (Spark Plan) memiliki batas jumlah email yang dapat dikirim per hari. Periksa Firebase Console > Usage untuk melihat apakah Anda telah mencapai batas.
+
+3.  **Verifikasi Pengaturan Provider**:
+    *   Kembali ke Firebase Console > Authentication > Sign-in method > Email/Password.
+    *   Pastikan **"Email link (passwordless sign-in)"** benar-benar statusnya **Enabled**.
+
+4.  **Cek Console Browser**:
+    *   Buka Developer Tools di browser Anda (Klik kanan > Inspect > Console).
+    *   Lihat apakah ada pesan error berwarna merah saat Anda mengklik tombol Sign Up.
+    *   Jika ada error `auth/operation-not-allowed`, artinya fitur Email Link belum diaktifkan di Firebase Console.
+    *   Jika ada error `auth/unauthorized-domain`, artinya domain Anda belum ditambahkan ke Authorized Domains.
+
+---
+
 ## Konfigurasi Admin
 
 Untuk mengakses dasbor admin, Anda perlu menambahkan UID pengguna Anda ke dalam daftar admin.
