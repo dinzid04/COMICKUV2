@@ -82,13 +82,8 @@ const AuthPage: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      toast({ title: 'Success', description: 'Account created successfully!' });
-      setLocation('/');
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    }
+    // For Sign Up, we now force Email Link auth (passwordless)
+    await handleSendEmailLink();
   };
 
   const handleSendEmailLink = async () => {
@@ -219,7 +214,7 @@ const AuthPage: React.FC = () => {
               <CardHeader>
                 <CardTitle>Sign Up</CardTitle>
                 <CardDescription>
-                  Create an account to save your reading history and favorites.
+                  Enter your email to receive a sign-up link.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -230,16 +225,17 @@ const AuthPage: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
-                <Button type="submit" className="w-full">Sign Up</Button>
+                <Button type="submit" className="w-full" disabled={isLinkSent}>
+                  <FaEnvelope className="mr-2 h-4 w-4" />
+                  {isLinkSent ? 'Link Sent!' : 'Sign Up with Email'}
+                </Button>
+                {isLinkSent && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Check your email for the sign-in link to complete your registration.
+                  </p>
+                )}
 
                 <div className="relative w-full">
                   <div className="absolute inset-0 flex items-center">
@@ -247,26 +243,15 @@ const AuthPage: React.FC = () => {
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      Or sign up with
+                      Or continue with
                     </span>
                   </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleSendEmailLink}
-                  disabled={isLinkSent}
-                >
-                  <FaEnvelope className="mr-2 h-4 w-4" />
-                  {isLinkSent ? 'Link Sent!' : 'Sign Up with Email Link'}
-                </Button>
-                {isLinkSent && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Check your email for the sign-in link.
-                  </p>
-                )}
+                <div className="grid grid-cols-2 gap-4 w-full">
+                  <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn(new GoogleAuthProvider())}><FaGoogle className="mr-2 h-4 w-4" /> Google</Button>
+                  <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn(new GithubAuthProvider())}><FaGithub className="mr-2 h-4 w-4" /> GitHub</Button>
+                </div>
               </CardFooter>
             </form>
           </Card>

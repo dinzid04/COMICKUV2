@@ -38,7 +38,7 @@ Ikuti langkah-langkah di bawah ini untuk menghubungkan aplikasi ini ke Firebase.
 2.  Klik **"Get started"**.
 3.  Di bawah tab **"Sign-in method"**, aktifkan *provider* berikut:
     *   **Email/Password**: Aktifkan toggle "Email/Password".
-    *   **Email Link (Passwordless Sign-in)**: Pada bagian **Email/Password**, pastikan untuk mencentang/mengaktifkan **"Email link (passwordless sign-in)"**. Ini sangat penting agar fitur "Sign Up with Email Link" berfungsi.
+    *   **Email Link (Passwordless Sign-in)**: Pada bagian **Email/Password**, pastikan untuk mencentang/mengaktifkan **"Email link (passwordless sign-in)"**. Ini sangat penting karena metode pendaftaran utama kini menggunakan Email Link (tanpa password).
     *   **Google** (Opsional, jika ingin mengaktifkan login Google).
     *   **GitHub** (Opsional, jika ingin mengaktifkan login GitHub).
 
@@ -139,15 +139,18 @@ Setelah menyelesaikan semua langkah ini, aplikasi Anda akan sepenuhnya terhubung
 
 ---
 
-## Konfigurasi Tambahan untuk Email Link
+## Konfigurasi Tambahan untuk Email Link (Wajib)
 
-Agar fitur "Sign Up with Email Link" bekerja dengan baik, ada beberapa hal yang harus diperhatikan:
+Fitur pendaftaran saat ini mewajibkan verifikasi email melalui link. Agar ini bekerja:
 
-1.  **Authorized Domains**:
+1.  **Aktifkan Email Link**:
+    *   Pastikan opsi **"Email link (passwordless sign-in)"** sudah dicentang di Firebase Console > Authentication > Sign-in method > Email/Password.
+
+2.  **Authorized Domains**:
     *   Buka Firebase Console, lalu navigasi ke **Authentication > Settings > Authorized domains**.
     *   Pastikan domain tempat aplikasi Anda berjalan terdaftar di sini. `localhost` sudah ada secara default. Jika Anda mendeploy aplikasi, tambahkan domain produksi Anda di sini.
 
-2.  **Redirect URL**:
+3.  **Redirect URL**:
     *   Saat pengguna mengklik link di email, mereka akan diarahkan kembali ke aplikasi. Kode saat ini mengarahkan pengguna ke `{origin}/login`.
     *   Pastikan tidak ada aturan firewall atau pengaturan server yang memblokir akses ke URL dengan parameter query.
 
