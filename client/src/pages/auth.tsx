@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { FaGoogle, FaGithub, FaEnvelope } from "react-icons/fa";
-import { Turnstile } from 'react-turnstile';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -223,10 +223,10 @@ const AuthPage: React.FC = () => {
                 />
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
-                <div className="flex justify-center w-full">
+                <div className="flex justify-center w-full min-h-[65px]">
                     <Turnstile
-                        sitekey="0x4AAAAAACFfejFFljemif4u"
-                        onVerify={(token) => setIsCaptchaVerified(true)}
+                        siteKey="1x00000000000000000000AA"
+                        onSuccess={() => setIsCaptchaVerified(true)}
                     />
                 </div>
                 <Button type="submit" className="w-full" disabled={!isCaptchaVerified}>
