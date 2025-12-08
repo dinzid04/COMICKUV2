@@ -7,7 +7,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   GithubAuthProvider,
-  getAdditionalUserInfo
+  getAdditionalUserInfo,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
@@ -16,16 +19,76 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { FaGoogle, FaGithub } from "react-icons/fa";
+import { FaGoogle, FaGithub, FaEnvelope } from "react-icons/fa";
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  React.useEffect(() => {
+    const handleEmailLinkSignIn = async () => {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        let emailForSignIn = window.localStorage.getItem('emailForSignIn');
+
+        if (!emailForSignIn) {
+          emailForSignIn = window.prompt('Please provide your email for confirmation');
+        }
+
+        if (emailForSignIn) {
+          try {
+            const result = await signInWithEmailLink(auth, emailForSignIn, window.location.href);
+            window.localStorage.removeItem('emailForSignIn');
+
+            const user = result.user;
+            const additionalInfo = getAdditionalUserInfo(result);
+
+            if (additionalInfo?.isNewUser) {
+              const userDocRef = doc(db, "users", user.uid);
+              const leaderboardDocRef = doc(db, "leaderboard", user.uid);
+
+              const newUser = {
+                uid: user.uid,
+                email: user.email!,
+                nickname: user.displayName || 'New User',
+                photoUrl: user.photoURL || '',
+                chaptersRead: 0
+              };
+
+              await setDoc(userDocRef, newUser);
+              await setDoc(leaderboardDocRef, {
+                uid: user.uid,
+                nickname: newUser.nickname,
+                photoUrl: newUser.photoUrl,
+                chaptersRead: 0
+              });
+            }
+
+            toast({ title: 'Success', description: 'Signed in successfully with email link!' });
+            setLocation('/');
+          } catch (error: any) {
+             toast({ title: 'Error', description: error.message, variant: 'destructive' });
+             // Some error occurred, you can inspect the code: error.code
+             // Common errors could be invalid email and invalid or expired OTPs.
+          }
+        }
+      }
+    };
+
+    handleEmailLinkSignIn();
+  }, [setLocation, toast]);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isCaptchaVerified) {
+        toast({ title: "Error", description: "Please complete the captcha verification.", variant: "destructive" });
+        return;
+    }
+
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       toast({ title: 'Success', description: 'Account created successfully!' });
@@ -159,8 +222,32 @@ const AuthPage: React.FC = () => {
                   required
                 />
               </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full">Sign Up</Button>
+              <CardFooter className="flex flex-col space-y-4">
+                <div className="flex justify-center w-full min-h-[65px]">
+                    <Turnstile
+                        siteKey="1x00000000000000000000AA"
+                        onSuccess={() => setIsCaptchaVerified(true)}
+                    />
+                </div>
+                <Button type="submit" className="w-full" disabled={!isCaptchaVerified}>
+                    Sign Up
+                </Button>
+
+                <div className="relative w-full">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 w-full">
+                  <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn(new GoogleAuthProvider())}><FaGoogle className="mr-2 h-4 w-4" /> Google</Button>
+                  <Button variant="outline" className="w-full" onClick={() => handleOAuthSignIn(new GithubAuthProvider())}><FaGithub className="mr-2 h-4 w-4" /> GitHub</Button>
+                </div>
               </CardFooter>
             </form>
           </Card>
