@@ -20,11 +20,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { FaGoogle, FaGithub, FaEnvelope } from "react-icons/fa";
+import { Turnstile } from 'react-turnstile';
 
 const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLinkSent, setIsLinkSent] = useState(false);
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -82,42 +83,18 @@ const AuthPage: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For Sign Up, we now force Email Link auth (passwordless)
-    await handleSendEmailLink();
-  };
 
-  const handleSendEmailLink = async () => {
-    if (!email) {
-      toast({ title: 'Error', description: 'Please enter your email first.', variant: 'destructive' });
-      return;
+    if (!isCaptchaVerified) {
+        toast({ title: "Error", description: "Please complete the captcha verification.", variant: "destructive" });
+        return;
     }
 
-    const actionCodeSettings = {
-      // URL you want to redirect back to. The domain (www.example.com) for this
-      // URL must be in the authorized domains list in the Firebase Console.
-      url: window.location.origin + '/login',
-      handleCodeInApp: true,
-    };
-
-    console.log("Sending email link with settings:", actionCodeSettings);
-
     try {
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      window.localStorage.setItem('emailForSignIn', email);
-      setIsLinkSent(true);
-      toast({
-        title: 'Success',
-        description: 'Sign-in link sent! If not received, check Spam/Junk folder.'
-      });
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Success', description: 'Account created successfully!' });
+      setLocation('/');
     } catch (error: any) {
-      console.error("Error sending email link:", error);
-      let errorMessage = error.message;
-      if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = "Email Link sign-in is not enabled in Firebase Console.";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "Invalid email address.";
-      }
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -226,7 +203,7 @@ const AuthPage: React.FC = () => {
               <CardHeader>
                 <CardTitle>Sign Up</CardTitle>
                 <CardDescription>
-                  Enter your email to receive a sign-up link.
+                  Create an account to save your reading history and favorites.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -237,17 +214,24 @@ const AuthPage: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
-                <Button type="submit" className="w-full" disabled={isLinkSent}>
-                  <FaEnvelope className="mr-2 h-4 w-4" />
-                  {isLinkSent ? 'Link Sent!' : 'Sign Up with Email'}
+                <div className="flex justify-center w-full">
+                    <Turnstile
+                        sitekey="1x00000000000000000000AA"
+                        onVerify={(token) => setIsCaptchaVerified(true)}
+                    />
+                </div>
+                <Button type="submit" className="w-full" disabled={!isCaptchaVerified}>
+                    Sign Up
                 </Button>
-                {isLinkSent && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Check your email for the sign-in link to complete your registration.
-                  </p>
-                )}
 
                 <div className="relative w-full">
                   <div className="absolute inset-0 flex items-center">

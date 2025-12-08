@@ -6,9 +6,10 @@ Baca Komik lengkap hanya di Comic Ku
 
 Proyek ini telah diperbarui untuk menyertakan fitur-fitur berikut:
 
-*   **Autentikasi Pengguna**: Sistem login dan pendaftaran menggunakan Firebase Authentication (Email/Password, Google, GitHub, dan Email Link).
+*   **Autentikasi Pengguna**: Sistem login dan pendaftaran menggunakan Firebase Authentication (Email/Password, Google, GitHub).
 *   **Favorit**: Pengguna dapat menyimpan manhwa favorit mereka.
 *   **Riwayat Baca**: Aplikasi secara otomatis menyimpan chapter terakhir yang dibaca oleh pengguna.
+*   **Keamanan**: Integrasi Cloudflare Turnstile untuk mencegah spam pendaftaran.
 
 Untuk menjalankan fitur-fitur ini, Anda perlu membuat dan mengkonfigurasi proyek Firebase Anda sendiri.
 
@@ -38,7 +39,6 @@ Ikuti langkah-langkah di bawah ini untuk menghubungkan aplikasi ini ke Firebase.
 2.  Klik **"Get started"**.
 3.  Di bawah tab **"Sign-in method"**, aktifkan *provider* berikut:
     *   **Email/Password**: Aktifkan toggle "Email/Password".
-    *   **Email Link (Passwordless Sign-in)**: Pada bagian **Email/Password**, pastikan untuk mencentang/mengaktifkan **"Email link (passwordless sign-in)"**. Ini sangat penting karena metode pendaftaran utama kini menggunakan Email Link (tanpa password).
     *   **Google** (Opsional, jika ingin mengaktifkan login Google).
     *   **GitHub** (Opsional, jika ingin mengaktifkan login GitHub).
 
@@ -135,46 +135,40 @@ service cloud.firestore {
 3.  Ganti nilai-nilai *placeholder* tersebut dengan objek `firebaseConfig` yang Anda salin dari Firebase pada **Langkah 2**.
 4.  Simpan file tersebut.
 
-Setelah menyelesaikan semua langkah ini, aplikasi Anda akan sepenuhnya terhubung dengan Firebase.
-
 ---
 
-## Konfigurasi Tambahan untuk Email Link (Wajib)
+## Konfigurasi Cloudflare Turnstile (Wajib)
 
-Fitur pendaftaran saat ini mewajibkan verifikasi email melalui link. Agar ini bekerja:
+Untuk mencegah pendaftaran akun spam dan melindungi batas database, aplikasi ini menggunakan **Cloudflare Turnstile**.
 
-1.  **Aktifkan Email Link**:
-    *   Pastikan opsi **"Email link (passwordless sign-in)"** sudah dicentang di Firebase Console > Authentication > Sign-in method > Email/Password.
+### Langkah 1: Dapatkan Site Key
 
-2.  **Authorized Domains**:
-    *   Buka Firebase Console, lalu navigasi ke **Authentication > Settings > Authorized domains**.
-    *   Pastikan domain tempat aplikasi Anda berjalan terdaftar di sini. `localhost` sudah ada secara default. Jika Anda mendeploy aplikasi, tambahkan domain produksi Anda di sini.
+1.  Buat akun atau masuk ke [Cloudflare Dashboard](https://dash.cloudflare.com/).
+2.  Navigasi ke menu **"Turnstile"** di sidebar kiri.
+3.  Klik **"Add Site"**.
+4.  Beri nama situs Anda (misalnya: "Comicku App").
+5.  Masukkan domain aplikasi Anda (misalnya: `localhost`, `comicku.vercel.app`).
+6.  Pilih **"Widget Mode"**: Managed (Disarankan).
+7.  Klik **"Create"**.
+8.  Salin **Site Key** yang diberikan.
 
-3.  **Redirect URL**:
-    *   Saat pengguna mengklik link di email, mereka akan diarahkan kembali ke aplikasi. Kode saat ini mengarahkan pengguna ke `{origin}/login`.
-    *   Pastikan tidak ada aturan firewall atau pengaturan server yang memblokir akses ke URL dengan parameter query.
+### Langkah 2: Masukkan Site Key ke Kode
 
----
+Secara default, aplikasi menggunakan **Dummy Site Key** untuk pengujian (`1x00000000000000000000AA`). Ini akan selalu lolos verifikasi.
 
-## Troubleshooting (Jika Email Tidak Masuk)
+Untuk menggantinya dengan Site Key asli Anda:
 
-Jika Anda telah mengklik "Sign Up with Email" namun tidak menerima email:
+1.  Buka file `client/src/pages/auth.tsx`.
+2.  Cari kode berikut:
+    ```tsx
+    <Turnstile
+        sitekey="1x00000000000000000000AA" // <-- Ganti dengan Site Key Anda
+        onVerify={(token) => setIsCaptchaVerified(true)}
+    />
+    ```
+3.  Ganti string `"1x00000000000000000000AA"` dengan Site Key yang Anda dapatkan dari Cloudflare.
 
-1.  **Periksa Folder Spam/Junk**:
-    *   Email dari Firebase sering kali masuk ke folder Spam atau Junk, terutama jika Anda menggunakan domain gratis (seperti `comicku-app.firebaseapp.com`) sebagai pengirim.
-
-2.  **Periksa Quota**:
-    *   Firebase Free Tier (Spark Plan) memiliki batas jumlah email yang dapat dikirim per hari. Periksa Firebase Console > Usage untuk melihat apakah Anda telah mencapai batas.
-
-3.  **Verifikasi Pengaturan Provider**:
-    *   Kembali ke Firebase Console > Authentication > Sign-in method > Email/Password.
-    *   Pastikan **"Email link (passwordless sign-in)"** benar-benar statusnya **Enabled**.
-
-4.  **Cek Console Browser**:
-    *   Buka Developer Tools di browser Anda (Klik kanan > Inspect > Console).
-    *   Lihat apakah ada pesan error berwarna merah saat Anda mengklik tombol Sign Up.
-    *   Jika ada error `auth/operation-not-allowed`, artinya fitur Email Link belum diaktifkan di Firebase Console.
-    *   Jika ada error `auth/unauthorized-domain`, artinya domain Anda belum ditambahkan ke Authorized Domains.
+Setelah ini, tombol Sign Up hanya akan aktif jika pengguna lolos verifikasi Cloudflare Turnstile.
 
 ---
 
