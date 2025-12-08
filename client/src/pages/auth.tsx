@@ -225,7 +225,7 @@ const AuthPage: React.FC = () => {
               <CardFooter className="flex flex-col space-y-4">
                 <div className="flex justify-center w-full">
                     <Turnstile
-                        sitekey="1x00000000000000000000AA"
+                        sitekey="0x4AAAAAACFfejFFljemif4u"
                         onVerify={(token) => setIsCaptchaVerified(true)}
                     />
                 </div>
