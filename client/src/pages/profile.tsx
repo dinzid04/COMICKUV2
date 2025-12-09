@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/seo';
 import { signOut } from 'firebase/auth';
@@ -45,9 +46,9 @@ const  cleanObject = (obj: any) => {
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
+  const { data: userData, updateProfileCache, invalidateProfile } = useUserProfile();
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const [userData, setUserData] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
 
@@ -56,27 +57,13 @@ const ProfilePage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (user) {
-      const fetchUserData = async () => {
-        const userDocRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data() as User;
-          setUserData(data);
-          setValue('nickname', data.nickname);
-          setValue('bio', data.bio);
-          setValue('socialLinks', data.socialLinks);
-        } else if (user.displayName) {
-          const initialData: User = {
-            uid: user.uid,
-            email: user.email!,
-            nickname: user.displayName,
-          };
-          setUserData(initialData);
-          setValue('nickname', user.displayName);
-        }
-      };
+    if (userData) {
+      setValue('nickname', userData.nickname);
+      setValue('bio', userData.bio);
+      setValue('socialLinks', userData.socialLinks);
+    }
 
+    if (user) {
       const fetchFavorites = async () => {
         const favoritesRef = collection(db, 'users', user.uid, 'favorites');
         const q = query(favoritesRef);
@@ -85,17 +72,20 @@ const ProfilePage: React.FC = () => {
         setFavorites(favs);
       };
 
-      fetchUserData();
       fetchFavorites();
     }
-  }, [user, setValue]);
+  }, [user, userData, setValue]);
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!user) return;
+    if (!user || !userData) return;
     const userDocRef = doc(db, 'users', user.uid);
     const leaderboardDocRef = doc(db, 'leaderboard', user.uid);
     try {
       const updatedUserData = cleanObject({ ...userData, ...data });
+
+      // Optimistic Update
+      updateProfileCache(updatedUserData);
+
       await setDoc(userDocRef, updatedUserData, { merge: true });
 
       const leaderboardData = cleanObject({
@@ -106,20 +96,19 @@ const ProfilePage: React.FC = () => {
       });
       await setDoc(leaderboardDocRef, leaderboardData, { merge: true });
 
-      const docSnap = await getDoc(userDocRef);
-      if (docSnap.exists()) {
-        setUserData(docSnap.data() as User);
-      }
+      // Re-validate to ensure consistency
+      invalidateProfile();
 
       toast({ title: 'Success', description: 'Profile updated successfully.' });
       setIsEditing(false);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to update profile.', variant: 'destructive' });
+      invalidateProfile(); // Revert on error
     }
   };
 
   const handleImageUpload = async (file: File, type: 'photo' | 'banner') => {
-    if (!user) return;
+    if (!user || !userData) return;
 
     const formData = new FormData();
     formData.append('file', file);
@@ -136,17 +125,22 @@ const ProfilePage: React.FC = () => {
         const userDocRef = doc(db, 'users', user.uid);
         const leaderboardDocRef = doc(db, 'leaderboard', user.uid);
         const fieldToUpdate = cleanObject(type === 'photo' ? { photoUrl: imageUrl } : { bannerUrl: imageUrl });
+
+        // Optimistic update
+        updateProfileCache(fieldToUpdate);
+
         await setDoc(userDocRef, fieldToUpdate, { merge: true });
         if (type === 'photo') {
           await setDoc(leaderboardDocRef, cleanObject({ photoUrl: imageUrl }), { merge: true });
         }
-        setUserData(prev => ({ ...prev!, ...fieldToUpdate }));
+
         toast({ title: 'Success', description: `${type === 'photo' ? 'Profile picture' : 'Banner'} updated.` });
       } else {
         throw new Error(result.message);
       }
     } catch (error) {
       toast({ title: 'Error', description: `Failed to upload ${type}.`, variant: 'destructive' });
+      invalidateProfile();
     }
   };
 
