@@ -185,9 +185,20 @@ const PrivateChat: React.FC = () => {
 
     // Check if chat doc exists, if not create it
     const chatRef = doc(db, 'private_chats', chatId);
-    const chatSnap = await getDoc(chatRef);
-
-    if (!chatSnap.exists()) {
+    try {
+      const chatSnap = await getDoc(chatRef);
+      if (!chatSnap.exists()) {
+        await setDoc(chatRef, {
+          participants: participants,
+          createdAt: serverTimestamp(),
+          lastMessage: '',
+          lastMessageTime: serverTimestamp()
+        });
+      }
+    } catch (error) {
+      // If getDoc fails (e.g. permission denied because it doesn't exist yet and we can't read it),
+      // we try to create it.
+      console.log("Chat check failed, attempting to create:", error);
       await setDoc(chatRef, {
         participants: participants,
         createdAt: serverTimestamp(),
