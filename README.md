@@ -61,10 +61,17 @@ Aturan keamanan sangat penting untuk melindungi data Anda.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan untuk data pengguna dan semua sub-koleksinya (favorites, history, dll.)
-    match /users/{userId}/{document=**} {
-      // Pengguna dapat membaca dan menulis ke data mereka sendiri.
-      // Admin juga dapat membaca dan menulis ke data pengguna mana pun.
+    // Aturan untuk dokumen pengguna utama (profil)
+    match /users/{userId} {
+      // Izinkan semua pengguna yang login untuk melihat profil pengguna lain (untuk search & chat)
+      allow read: if request.auth != null;
+      // Hanya pemilik akun atau admin yang bisa mengedit
+      allow write: if request.auth != null &&
+        (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Aturan untuk sub-koleksi pengguna (favorites, history) - Tetap Privat
+    match /users/{userId}/{subcollection}/{document=**} {
       allow read, write: if request.auth != null &&
         (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
