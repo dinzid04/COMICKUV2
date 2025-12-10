@@ -122,6 +122,24 @@ service cloud.firestore {
       // Pengguna hanya bisa membuat atau mengubah profilnya sendiri
       allow create, update: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Aturan untuk Private Chat
+    match /private_chats/{chatId} {
+      // Pengguna bisa membuat chat baru jika mereka termasuk dalam partisipan
+      allow create: if request.auth != null;
+      // Pengguna bisa membaca chat jika UID mereka ada di array 'participants'
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+       // Pengguna bisa mengupdate chat (misal: lastMessage) jika mereka partisipan
+      allow update: if request.auth != null && request.auth.uid in resource.data.participants;
+
+      // Aturan untuk sub-koleksi messages
+      match /messages/{messageId} {
+        // Pengguna bisa membaca pesan jika mereka punya akses ke dokumen chat induk
+        allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants;
+        // Pengguna bisa mengirim pesan jika mereka punya akses ke dokumen chat induk
+        allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants;
+      }
+    }
   }
 }
 ```

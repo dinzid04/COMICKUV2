@@ -12,6 +12,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { User as AppUser } from '@shared/types';
 import VerificationBadge from '@/components/ui/verification-badge';
+// Import the simplified ChatHeader we created previously (or used in RoomChat)
+// If it doesn't exist, we fallback or use the main Header, but the user liked "Comic Ku" header.
+// I'll assume it exists as I saw it in RoomChat code previously.
 import ChatHeader from '@/components/chat-header';
 
 // Interfaces
@@ -82,7 +85,7 @@ const PrivateChat: React.FC = () => {
           // Fetch other user's profile
           // Optimisation: In a real app, cache this or store basic user info in the chat doc.
           // For now, we fetch it to ensure freshness.
-          const userDocRef = doc(db, 'user_profiles', otherUserId);
+          const userDocRef = doc(db, 'users', otherUserId);
           const userDocSnap = await getDoc(userDocRef);
 
           let otherUserData: AppUser;
@@ -240,17 +243,20 @@ const PrivateChat: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-      <ChatHeader />
+    <div className="flex flex-col h-[100dvh] bg-gray-100 dark:bg-gray-900">
+      {/* Fixed Top Header (Comic Ku) */}
+      <div className="sticky top-0 z-50">
+        <ChatHeader />
+      </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar / List (Hidden on mobile if chat is open) */}
         <div className={`
           w-full md:w-1/3 lg:w-1/4 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
           ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}
         `}>
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0">
             <h2 className="font-bold text-lg">Pesan</h2>
             <button
               onClick={() => setIsSearching(!isSearching)}
@@ -350,13 +356,13 @@ const PrivateChat: React.FC = () => {
 
         {/* Chat Area (Right Side) */}
         <div className={`
-          flex-1 flex flex-col bg-gray-50 dark:bg-gray-900
+          flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 h-full
           ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}
         `}>
           {activeChatId && activeChatUser ? (
             <>
-              {/* Chat Header */}
-              <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+              {/* Chat Header (Profile) - Sticky */}
+              <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 shrink-0 sticky top-0 z-40">
                 <button
                   onClick={() => setIsMobileChatOpen(false)}
                   className="md:hidden p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
@@ -376,8 +382,8 @@ const PrivateChat: React.FC = () => {
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Messages - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                 {messages.map(msg => (
                   <div key={msg.id} className={`flex items-start gap-3 ${msg.senderId === user.uid ? 'justify-end' : ''}`}>
                     {msg.senderId !== user.uid && (
@@ -406,8 +412,8 @@ const PrivateChat: React.FC = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+              {/* Input Area - Fixed at bottom */}
+              <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0 sticky bottom-0 z-40">
                 <form onSubmit={handleSendMessage} className="flex gap-2">
                   <input
                     type="text"
