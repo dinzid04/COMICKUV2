@@ -23,6 +23,7 @@ import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
 import LeaderboardPage from "@/pages/leaderboard";
 import RoomChat from "@/pages/RoomChat";
+import PrivateChat from "@/pages/PrivateChat";
 import NotFound from "@/pages/not-found";
 import { ProtectedRoute } from "@/components/protected-route";
 
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/room-chat" component={RoomChat} />
+      <Route path="/messages" component={PrivateChat} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/search/:query" component={SearchPage} />
       <Route path="/manhwa/:id" component={ManhwaDetail} />
@@ -71,10 +73,11 @@ function App() {
 function AppLayout() {
   const [isChapterReader] = useRoute("/chapter/:id");
   const [isChatPage] = useRoute("/room-chat");
+  const [isPrivateChat] = useRoute("/messages");
 
-  const showHeader = !isChapterReader && !isChatPage;
-  const showFooter = !isChapterReader && !isChatPage;
-  const mainPadding = !isChapterReader && !isChatPage ? "pb-16 md:pb-0" : "";
+  const showHeader = !isChapterReader && !isChatPage && !isPrivateChat;
+  const showFooter = !isChapterReader && !isChatPage && !isPrivateChat;
+  const mainPadding = !isChapterReader && !isChatPage && !isPrivateChat ? "pb-16 md:pb-0" : "";
 
 
   return (
