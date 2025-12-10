@@ -68,10 +68,10 @@ const PrivateChat: React.FC = () => {
     // Query chats where I am a participant
     // Note: Firestore array-contains is limited.
     // We will query the top-level collection `private_chats` where `participants` array-contains my UID.
+    // Removed orderBy to avoid composite index requirement issues. We sort manually below.
     const q = query(
       collection(db, 'private_chats'),
-      where('participants', 'array-contains', user.uid),
-      orderBy('lastMessageTime', 'desc')
+      where('participants', 'array-contains', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
@@ -111,6 +111,14 @@ const PrivateChat: React.FC = () => {
           });
         }
       }
+
+      // Sort client-side by lastMessageTime descending
+      chats.sort((a, b) => {
+        const timeA = a.lastMessageTime?.toMillis() || 0;
+        const timeB = b.lastMessageTime?.toMillis() || 0;
+        return timeB - timeA;
+      });
+
       setConversations(chats);
     });
 
