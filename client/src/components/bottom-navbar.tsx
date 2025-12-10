@@ -1,5 +1,5 @@
 import { Link, useRoute } from "wouter";
-import { Home, History, User, Trophy } from "lucide-react";
+import { Home, History, User, Trophy, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function BottomNavbar() {
@@ -8,13 +8,14 @@ export function BottomNavbar() {
   const [isHistoryActive] = useRoute("/history");
   const [isLeaderboardActive] = useRoute("/leaderboard");
   const [isProfileActive] = useRoute("/profile");
+  const [isMessagesActive] = useRoute("/messages");
 
   const profileLink = user ? "/profile" : "/login";
 
   return (
     <nav className="fixed bottom-0 z-50 w-full border-t border-border bg-background/80 backdrop-blur-xl md:hidden">
       <div className="container mx-auto max-w-7xl">
-        <div className="grid grid-cols-4 h-16">
+        <div className="grid grid-cols-5 h-16">
           <Link
             href="/"
             className={`flex flex-col items-center justify-center gap-1 transition-colors ${
@@ -23,6 +24,15 @@ export function BottomNavbar() {
           >
             <Home className="h-5 w-5" />
             <span className="text-xs">Beranda</span>
+          </Link>
+          <Link
+            href="/messages"
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
+              isMessagesActive ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <MessageSquare className="h-5 w-5" />
+            <span className="text-xs">Pesan</span>
           </Link>
           <Link
             href="/history"
@@ -40,7 +50,7 @@ export function BottomNavbar() {
             }`}
           >
             <Trophy className="h-5 w-5" />
-            <span className="text-xs">Leaderboard</span>
+            <span className="text-xs">Rank</span>
           </Link>
           <Link
             href={profileLink}

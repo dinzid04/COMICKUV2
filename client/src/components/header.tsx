@@ -127,6 +127,11 @@ export function Header() {
                 Room Chat
               </Button>
             </Link>
+            <Link href="/messages" data-testid="link-messages">
+              <Button variant="ghost" className="hover-elevate active-elevate-2">
+                Pesan
+              </Button>
+            </Link>
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -257,6 +262,9 @@ export function Header() {
               </Link>
               <Link href="/room-chat" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
                 <MessageSquare className="mr-2 h-5 w-5" /> Room Chat
+              </Link>
+              <Link href="/messages" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
+                <MessageSquare className="mr-2 h-5 w-5" /> Pesan
               </Link>
               {user ? (
                 <>

@@ -141,7 +141,8 @@ const PrivateChat: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const usersRef = collection(db, 'user_profiles');
+      // Searching in 'users' collection as 'user_profiles' might not be populated
+      const usersRef = collection(db, 'users');
       // Simple prefix search
       const q = query(
         usersRef,
