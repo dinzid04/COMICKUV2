@@ -30,17 +30,7 @@ export function FloatingNotification() {
       if (docSnap.exists()) {
         const data = docSnap.data() as NotificationConfig;
         setConfig(data);
-        // Only open if enabled and we haven't manually closed it in this "session" (component lifecycle)
-        // or actually, user wants "when opening website".
-        // If we want it to reappear on reload, we just set isOpen(true).
-        // If the admin toggles it ON while user is on site, it should probably pop up.
         if (data.enabled) {
-             // Check session storage to avoid spamming on every navigation if using client-side routing?
-             // But prompt implies strictly "when opening website".
-             // Let's rely on component mount. Since this will be in AppLayout, it mounts once on SPA load usually,
-             // but if user refreshes, it mounts again. That's fine.
-             // We just need to make sure we don't re-open it if user closed it, *unless* config changed?
-             // For simplicity: If enabled and not closed by user in this session -> Open.
              const isClosed = sessionStorage.getItem('notification_closed');
              if (!isClosed) {
                  setIsOpen(true);
@@ -58,8 +48,6 @@ export function FloatingNotification() {
   }, []);
 
   useEffect(() => {
-    // Fetch stats if config enables it and we haven't yet
-    // Or maybe we should refresh stats every time it opens?
     if (config?.enabled && config?.showStats && !hasFetchedStats) {
       fetchStats();
     }
@@ -74,10 +62,6 @@ export function FloatingNotification() {
 
       // 2. Online Users (Active in last 5 minutes)
       const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-      // Note: Firestore query requires an index if mixed with other filters,
-      // but here we just filter by lastSeen.
-      // Ensure 'lastSeen' is stored as Timestamp or compatible.
-      // In usePresence, we used serverTimestamp().
 
       const onlineQuery = query(
         usersColl,
@@ -101,6 +85,38 @@ export function FloatingNotification() {
   const handleClose = () => {
     setIsOpen(false);
     sessionStorage.setItem('notification_closed', 'true');
+  };
+
+  // Function to render text with clickable links
+  const renderMessageWithLinks = (text: string) => {
+    // Regex to match URLs (http/https)
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    // Split by regex but keep delimiters (the URLs)
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        // It's a URL
+        // Display text without protocol
+        const displayText = part.replace(/^https?:\/\//, '');
+
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline break-all font-semibold"
+          >
+            {displayText}
+          </a>
+        );
+      } else {
+        // Regular text
+        return <span key={index}>{part}</span>;
+      }
+    });
   };
 
   if (!config || !config.enabled || !isOpen) return null;
@@ -145,7 +161,7 @@ export function FloatingNotification() {
               {config.message && (
                 <div className={`prose dark:prose-invert max-w-none mb-6 ${config.imageUrl ? '' : 'mt-2'}`}>
                   <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap font-medium text-zinc-800 dark:text-zinc-200">
-                    {config.message}
+                    {renderMessageWithLinks(config.message)}
                   </p>
                 </div>
               )}
