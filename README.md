@@ -11,6 +11,7 @@ Proyek ini telah diperbarui untuk menyertakan fitur-fitur berikut:
 *   **Riwayat Baca**: Aplikasi secara otomatis menyimpan chapter terakhir yang dibaca oleh pengguna.
 *   **Keamanan**: Integrasi Cloudflare Turnstile untuk mencegah spam pendaftaran.
 *   **Notifikasi & Pengumuman**: Fitur notifikasi mengambang yang dapat dikonfigurasi admin.
+*   **Manajemen Chat**: Admin dapat menghapus semua pesan di chat komunitas.
 
 Untuk menjalankan fitur-fitur ini, Anda perlu membuat dan mengkonfigurasi proyek Firebase Anda sendiri.
 
@@ -125,12 +126,15 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // Aturan untuk Room Chat
+    // Aturan untuk Room Chat (DIPERBARUI UNTUK ADMIN DELETE ALL)
     match /chat_messages/{messageId} {
       // Hanya pengguna yang sudah login yang dapat membaca dan mengirim pesan
       allow read, create: if request.auth != null;
-      // Pengguna hanya bisa mengedit atau menghapus pesannya sendiri
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Pengguna bisa hapus pesan sendiri, Admin bisa hapus semua (atau update)
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
     // Aturan untuk profil pengguna publik (untuk fitur @mention)
