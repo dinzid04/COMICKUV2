@@ -44,6 +44,7 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/register" component={AuthPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/user/:uid" component={ProfilePage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/room-chat" component={RoomChat} />
       <Route path="/messages" component={PrivateChat} />

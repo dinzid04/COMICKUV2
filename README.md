@@ -73,7 +73,14 @@ service cloud.firestore {
         (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
 
-    // Aturan untuk sub-koleksi pengguna (favorites, history) - Tetap Privat
+    // Aturan untuk sub-koleksi pengguna
+    // Favorites: Bisa dibaca publik (untuk fitur lihat profil user lain), tapi hanya bisa diedit pemilik
+    match /users/{userId}/favorites/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Sub-koleksi lain (history, dll) - Tetap Privat
     match /users/{userId}/{subcollection}/{document=**} {
       allow read, write: if request.auth != null &&
         (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
