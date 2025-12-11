@@ -3,7 +3,7 @@ import { db } from '@/firebaseConfig';
 import {
   collection, query, orderBy, onSnapshot, addDoc,
   serverTimestamp, getDocs, where, limit, doc,
-  setDoc, getDoc, updateDoc, Timestamp
+  setDoc, getDoc, updateDoc, Timestamp, increment
 } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +30,7 @@ interface ChatConversation {
   lastMessage: string;
   lastMessageTime: any;
   participants: string[];
+  unreadCount?: number;
 }
 
 // Interfaces for Community Chat
@@ -86,7 +87,6 @@ const PrivateChat: React.FC = () => {
     if (!user) return;
 
     // Query chats where I am a participant
-    // Removed orderBy to avoid composite index requirement issues. We sort manually below.
     const q = query(
       collection(db, 'private_chats'),
       where('participants', 'array-contains', user.uid)
@@ -123,7 +123,8 @@ const PrivateChat: React.FC = () => {
             otherUser: otherUserData,
             lastMessage: data.lastMessage || '',
             lastMessageTime: data.lastMessageTime,
-            participants: data.participants
+            participants: data.participants,
+            unreadCount: data.unreadCounts?.[user.uid] || 0
           });
         }
       }
@@ -156,6 +157,16 @@ const PrivateChat: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Reset Unread Count when Chat is Opened
+  useEffect(() => {
+    if (activeChatId && activeChatId !== 'community' && user) {
+        const chatRef = doc(db, 'private_chats', activeChatId);
+        updateDoc(chatRef, {
+            [`unreadCounts.${user.uid}`]: 0
+        }).catch(err => console.log("Failed to reset unread count (might be new chat)", err));
+    }
+  }, [activeChatId, user]);
+
   // Load Messages for Active Chat
   useEffect(() => {
     if (!activeChatId) {
@@ -163,8 +174,6 @@ const PrivateChat: React.FC = () => {
         return;
     }
 
-    // If it's community chat, we handle it separately in another effect or here?
-    // Let's keep logic separate. This effect is for Private Chat.
     if (activeChatId === 'community') return;
 
     const q = query(
@@ -202,9 +211,7 @@ const PrivateChat: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Searching in 'users' collection as 'user_profiles' might not be populated
       const usersRef = collection(db, 'users');
-      // Simple prefix search
       const q = query(
         usersRef,
         where('nickname', '>=', searchQuery),
@@ -215,7 +222,7 @@ const PrivateChat: React.FC = () => {
       const snapshot = await getDocs(q);
       const results = snapshot.docs
         .map(doc => ({ uid: doc.id, ...doc.data() } as AppUser))
-        .filter(u => u.uid !== user?.uid); // Exclude self
+        .filter(u => u.uid !== user?.uid);
 
       setSearchResults(results);
     } catch (error) {
@@ -230,7 +237,6 @@ const PrivateChat: React.FC = () => {
   const startChat = async (targetUser: AppUser) => {
     if (!user) return;
 
-    // Construct Chat ID: sort UIDs to ensure consistency
     const participants = [user.uid, targetUser.uid].sort();
     const chatId = participants.join('_');
 
@@ -238,11 +244,10 @@ const PrivateChat: React.FC = () => {
     setActiveChatId(chatId);
     setIsCommunityChat(false);
     setIsMobileChatOpen(true);
-    setIsSearching(false); // Close search view
-    setSearchQuery(''); // Clear search
+    setIsSearching(false);
+    setSearchQuery('');
     setSearchResults([]);
 
-    // Check if chat doc exists, if not create it
     const chatRef = doc(db, 'private_chats', chatId);
     try {
       const chatSnap = await getDoc(chatRef);
@@ -251,7 +256,8 @@ const PrivateChat: React.FC = () => {
           participants: participants,
           createdAt: serverTimestamp(),
           lastMessage: '',
-          lastMessageTime: serverTimestamp()
+          lastMessageTime: serverTimestamp(),
+          unreadCounts: { [user.uid]: 0, [targetUser.uid]: 0 }
         });
       }
     } catch (error) {
@@ -260,7 +266,8 @@ const PrivateChat: React.FC = () => {
         participants: participants,
         createdAt: serverTimestamp(),
         lastMessage: '',
-        lastMessageTime: serverTimestamp()
+        lastMessageTime: serverTimestamp(),
+        unreadCounts: { [user.uid]: 0, [targetUser.uid]: 0 }
       });
     }
   };
@@ -272,7 +279,6 @@ const PrivateChat: React.FC = () => {
       setIsMobileChatOpen(true);
   };
 
-  // Mentions logic for Community Chat
   const searchMentionUsers = async (queryStr: string) => {
     if (queryStr.length === 0) {
       setMentionUsers([]);
@@ -318,11 +324,10 @@ const PrivateChat: React.FC = () => {
     if (!user || !activeChatId || !newMessage.trim()) return;
 
     const text = newMessage.trim();
-    setNewMessage(''); // Clear input immediately
+    setNewMessage('');
 
     try {
       if (activeChatId === 'community') {
-         // Send Community Message
          const userDocRef = doc(db, 'users', user.uid);
          const userDocSnap = await getDoc(userDocRef);
          const userData = userDocSnap.data();
@@ -342,8 +347,6 @@ const PrivateChat: React.FC = () => {
          });
          setMentions([]);
       } else {
-          // Send Private Message
-          // 1. Add message to subcollection
           await addDoc(collection(db, 'private_chats', activeChatId, 'messages'), {
             senderId: user.uid,
             text: text,
@@ -351,12 +354,19 @@ const PrivateChat: React.FC = () => {
             read: false
           });
 
-          // 2. Update top-level chat document with last message
           const chatRef = doc(db, 'private_chats', activeChatId);
-          await updateDoc(chatRef, {
+          const otherUserId = activeChatId.split('_').find(id => id !== user.uid);
+
+          const updates: any = {
             lastMessage: text,
             lastMessageTime: serverTimestamp()
-          });
+          };
+
+          if (otherUserId) {
+            updates[`unreadCounts.${otherUserId}`] = increment(1);
+          }
+
+          await updateDoc(chatRef, updates);
       }
 
     } catch (error) {
@@ -376,7 +386,6 @@ const PrivateChat: React.FC = () => {
     return DOMPurify.sanitize(rawHTML);
   };
 
-  // UI Components
   if (!user) {
     return (
       <div className="flex flex-col h-screen items-center justify-center p-4">
@@ -387,18 +396,15 @@ const PrivateChat: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-gray-100 dark:bg-gray-900">
-      {/* Fixed Top Header (Comic Ku) */}
       <div className="sticky top-0 z-50">
         <ChatHeader />
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar / List (Hidden on mobile if chat is open) */}
         <div className={`
           w-full md:w-1/3 lg:w-1/4 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
           ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}
         `}>
-          {/* Sidebar Header */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0">
             <h2 className="font-bold text-lg">Pesan</h2>
             <button
@@ -410,7 +416,6 @@ const PrivateChat: React.FC = () => {
             </button>
           </div>
 
-          {/* Content: Search or Chat List */}
           {isSearching ? (
             <div className="flex-1 flex flex-col p-4">
                <form onSubmit={handleSearch} className="mb-4 flex gap-2">
@@ -455,7 +460,6 @@ const PrivateChat: React.FC = () => {
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto">
-              {/* Community Chat Item (Always at top) */}
               <div
                 onClick={openCommunityChat}
                 className={`
@@ -505,9 +509,16 @@ const PrivateChat: React.FC = () => {
                            {chat.lastMessageTime ? formatDistanceToNow(chat.lastMessageTime.toDate(), { locale: id }) : ''}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                        {chat.lastMessage}
-                      </p>
+                      <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate flex-1">
+                            {chat.lastMessage}
+                          </p>
+                          {chat.unreadCount && chat.unreadCount > 0 ? (
+                              <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                                  {chat.unreadCount}
+                              </span>
+                          ) : null}
+                      </div>
                     </div>
                   </div>
               ))}
@@ -522,14 +533,12 @@ const PrivateChat: React.FC = () => {
           )}
         </div>
 
-        {/* Chat Area (Right Side) */}
         <div className={`
           flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 h-full
           ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}
         `}>
           {activeChatId ? (
             <>
-              {/* Chat Header (Profile or Community) - Sticky */}
               <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 shrink-0 sticky top-0 z-40">
                 <button
                   onClick={() => setIsMobileChatOpen(false)}
@@ -566,7 +575,6 @@ const PrivateChat: React.FC = () => {
                 )}
               </div>
 
-              {/* Messages - Scrollable */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                 {(activeChatId === 'community' ? communityMessages : messages).map(msg => (
                   <div key={msg.id} className={`flex items-start gap-3 ${(msg as any).userId === user.uid || (msg as any).senderId === user.uid ? 'justify-end' : ''}`}>
@@ -609,7 +617,6 @@ const PrivateChat: React.FC = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area - Fixed at bottom */}
               <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0 sticky bottom-0 z-40 relative">
                  {showMentions && mentionUsers.length > 0 && activeChatId === 'community' && (
                   <div className="absolute bottom-full left-0 right-0 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-t-lg shadow-lg max-h-60 overflow-y-auto z-50">

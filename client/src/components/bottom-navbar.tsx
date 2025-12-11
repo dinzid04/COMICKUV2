@@ -1,6 +1,7 @@
 import { Link, useRoute } from "wouter";
 import { Home, History, User, Trophy, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useUnreadMessages } from "@/hooks/use-unread-messages";
 
 export function BottomNavbar() {
   const { user } = useAuth();
@@ -9,6 +10,9 @@ export function BottomNavbar() {
   const [isLeaderboardActive] = useRoute("/leaderboard");
   const [isProfileActive] = useRoute("/profile");
   const [isMessagesActive] = useRoute("/messages");
+
+  // Unread count
+  const unreadCount = useUnreadMessages();
 
   const profileLink = user ? "/profile" : "/login";
 
@@ -27,11 +31,18 @@ export function BottomNavbar() {
           </Link>
           <Link
             href="/messages"
-            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 transition-colors relative ${
               isMessagesActive ? "text-primary" : "text-muted-foreground"
             }`}
           >
-            <MessageSquare className="h-5 w-5" />
+            <div className="relative">
+                <MessageSquare className="h-5 w-5" />
+                {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 flex items-center justify-center text-[8px] font-bold text-white">
+                        {unreadCount > 9 ? '' : unreadCount}
+                    </span>
+                )}
+            </div>
             <span className="text-xs">Pesan</span>
           </Link>
           <Link

@@ -11,6 +11,7 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import { auth } from "@/firebaseConfig";
 import { signOut } from "firebase/auth";
 import { getSearchHistory, addSearchHistory, removeSearchHistory } from "@/lib/search-history";
+import { useUnreadMessages } from "@/hooks/use-unread-messages";
 
 export function Header() {
   const { user } = useAuth();
@@ -21,6 +22,9 @@ export function Header() {
   const [, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+
+  // Unread messages count
+  const unreadCount = useUnreadMessages();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,9 +126,14 @@ export function Header() {
                 Genre
               </Button>
             </Link>
-            <Link href="/messages" data-testid="link-messages">
+            <Link href="/messages" data-testid="link-messages" className="relative">
               <Button variant="ghost" className="hover-elevate active-elevate-2">
                 Pesan
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 -mt-1 -mr-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center pointer-events-none">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Button>
             </Link>
             {user ? (
@@ -186,11 +195,14 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden hover-elevate active-elevate-2"
+            className="md:hidden hover-elevate active-elevate-2 relative"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             data-testid="button-menu-toggle"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+             {unreadCount > 0 && !mobileMenuOpen && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-background"></span>
+             )}
           </Button>
         </div>
 
@@ -256,7 +268,16 @@ export function Header() {
                 <BookOpen className="mr-2 h-5 w-5" /> Genre
               </Link>
               <Link href="/messages" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
-                <MessageSquare className="mr-2 h-5 w-5" /> Pesan
+                <div className="relative">
+                   <MessageSquare className="mr-2 h-5 w-5" />
+                   {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border border-background"></span>
+                   )}
+                </div>
+                Pesan
+                {unreadCount > 0 && (
+                    <span className="ml-auto text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">{unreadCount}</span>
+                )}
               </Link>
               {user ? (
                 <>
