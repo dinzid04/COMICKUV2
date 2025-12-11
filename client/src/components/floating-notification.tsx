@@ -10,6 +10,8 @@ interface NotificationConfig {
   showStats: boolean;
   message: string;
   imageUrl: string;
+  cooldownMinutes?: number;
+  updatedAt?: any; // Firestore Timestamp
 }
 
 interface UserStats {
@@ -30,13 +32,11 @@ export function FloatingNotification() {
       if (docSnap.exists()) {
         const data = docSnap.data() as NotificationConfig;
         setConfig(data);
+
         if (data.enabled) {
-             const isClosed = sessionStorage.getItem('notification_closed');
-             if (!isClosed) {
-                 setIsOpen(true);
-             }
+            checkShouldShow(data);
         } else {
-             setIsOpen(false);
+            setIsOpen(false);
         }
       } else {
         setConfig(null);
@@ -46,6 +46,46 @@ export function FloatingNotification() {
 
     return () => unsub();
   }, []);
+
+  const checkShouldShow = (data: NotificationConfig) => {
+      // 1. Check if it's a new update
+      const storedLastConfigTime = localStorage.getItem('notification_last_config_time');
+      const currentConfigTime = data.updatedAt ? (data.updatedAt.toMillis ? data.updatedAt.toMillis() : 0) : 0;
+
+      if (!storedLastConfigTime || currentConfigTime > parseInt(storedLastConfigTime)) {
+          // New update! Show it regardless of cooldown, unless already closed in this session (optional, but let's prioritize update)
+          // Actually, if it's a new update, we should probably show it even if closed in session?
+          // Let's stick to standard flow: Show it.
+          setIsOpen(true);
+          return;
+      }
+
+      // 2. Check Cooldown
+      if (data.cooldownMinutes && data.cooldownMinutes > 0) {
+          const storedLastSeen = localStorage.getItem('notification_last_seen');
+          if (!storedLastSeen) {
+              setIsOpen(true);
+          } else {
+              const lastSeenTime = parseInt(storedLastSeen);
+              const now = Date.now();
+              const cooldownMillis = data.cooldownMinutes * 60 * 1000;
+
+              if (now - lastSeenTime > cooldownMillis) {
+                  setIsOpen(true);
+              } else {
+                  setIsOpen(false);
+              }
+          }
+      } else {
+          // 3. Session based (default)
+          const isClosed = sessionStorage.getItem('notification_closed');
+          if (!isClosed) {
+              setIsOpen(true);
+          } else {
+              setIsOpen(false);
+          }
+      }
+  };
 
   useEffect(() => {
     if (config?.enabled && config?.showStats && !hasFetchedStats) {
@@ -84,7 +124,20 @@ export function FloatingNotification() {
 
   const handleClose = () => {
     setIsOpen(false);
-    sessionStorage.setItem('notification_closed', 'true');
+    const now = Date.now();
+
+    // Update storage based on type
+    if (config?.cooldownMinutes && config.cooldownMinutes > 0) {
+        localStorage.setItem('notification_last_seen', now.toString());
+    } else {
+        sessionStorage.setItem('notification_closed', 'true');
+    }
+
+    // Always update the known config version so we don't treat it as "new" next time until it actually changes
+    if (config?.updatedAt) {
+        const time = config.updatedAt.toMillis ? config.updatedAt.toMillis() : 0;
+        localStorage.setItem('notification_last_config_time', time.toString());
+    }
   };
 
   // Function to render text with clickable links
