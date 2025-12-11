@@ -5,6 +5,7 @@ import { collection, query, getDocs } from 'firebase/firestore';
 import { SEO } from '@/components/seo';
 import { Loader2, AlertCircle, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useLocation } from 'wouter';
 
 interface LeaderboardUser {
   uid: string;
@@ -59,7 +60,11 @@ const LeaderboardPage: React.FC = () => {
 
       <div className="space-y-4">
         {leaderboard?.map((user, index) => (
-          <div key={user.uid} className="flex items-center bg-muted p-4 rounded-lg">
+          <div
+            key={user.uid}
+            className="flex items-center bg-muted p-4 rounded-lg cursor-pointer hover:bg-accent transition-colors"
+            onClick={() => window.location.href = `/user/${user.uid}`}
+          >
             <div className="w-12 text-center text-lg font-bold">
               {index + 1}
             </div>

@@ -31,7 +31,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatUser, onBack, isMobile }) =
         </Button>
 
         {chatUser ? (
-          <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => setLocation(`/user/${chatUser.uid}`)}
+          >
             <div className="relative">
                 <Avatar className="h-10 w-10 border-2 border-background">
                 <AvatarImage src={chatUser.photoUrl} alt={chatUser.nickname} />
