@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BottomNavbar } from "@/components/bottom-navbar";
+import { FloatingNotification } from "@/components/floating-notification";
 
 // Pages
 import Home from "@/pages/home";
@@ -92,6 +93,7 @@ function AppLayout() {
       </main>
       {showFooter && <Footer />}
       {showFooter && <BottomNavbar />}
+      <FloatingNotification />
     </div>
   );
 }
