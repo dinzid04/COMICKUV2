@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/firebaseConfig';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from '@shared/types';
 import { toast } from '@/hooks/use-toast';
 import { Check, Shield, Users, Activity, EyeOff } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<(User & { isOnline: boolean })[]>([]);
@@ -80,6 +81,11 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  const chartData = [
+    { name: 'Online', value: stats.online },
+    { name: 'Offline', value: stats.offline },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
@@ -113,6 +119,34 @@ const UserManagement: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Chart */}
+      <Card>
+          <CardHeader>
+              <CardTitle>User Activity Overview</CardTitle>
+              <CardDescription>Real-time online status distribution</CardDescription>
+          </CardHeader>
+          <CardContent className="pl-0">
+             <div className="h-[200px] w-full"> {/* Height adjusted as requested */}
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" width={80} />
+                    <Tooltip
+                        cursor={{fill: 'transparent'}}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.name === 'Online' ? '#22c55e' : '#94a3b8'} />
+                        ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
