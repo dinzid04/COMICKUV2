@@ -8,6 +8,8 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BottomNavbar } from "@/components/bottom-navbar";
 import { FloatingNotification } from "@/components/floating-notification";
+import SecurityCheck from "@/components/security-check";
+import { useState, useEffect } from "react";
 
 // Pages
 import Home from "@/pages/home";
@@ -76,14 +78,36 @@ function AppLayout() {
   const [isChapterReader] = useRoute("/chapter/:id");
   const [isChatPage] = useRoute("/room-chat");
   const [isPrivateChat] = useRoute("/messages");
+  const [isVerified, setIsVerified] = useState(false);
 
-  // Activate presence tracking
+  // Check session storage on mount
+  useEffect(() => {
+    const verified = sessionStorage.getItem("turnstile_verified");
+    if (verified === "true") {
+      setIsVerified(true);
+    }
+  }, []);
+
+  const handleVerification = () => {
+    sessionStorage.setItem("turnstile_verified", "true");
+    setIsVerified(true);
+  };
+
+  // Activate presence tracking only if verified (optional, but good practice)
   usePresence();
 
   const showHeader = !isChapterReader && !isChatPage && !isPrivateChat;
   const showFooter = !isChapterReader && !isChatPage && !isPrivateChat;
   const mainPadding = !isChapterReader && !isChatPage && !isPrivateChat ? "pb-16 md:pb-0" : "";
 
+  if (!isVerified) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <SecurityCheck onVerify={handleVerification} />
+        <Toaster />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

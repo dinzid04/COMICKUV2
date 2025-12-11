@@ -1,40 +1,70 @@
 import React from 'react';
-import { Shield, Check } from 'lucide-react';
+import { Check, Shield, Award } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface VerificationBadgeProps {
-  verification: 'admin' | 'verified' | null | undefined;
-  className?: string;
+  verification: string | null | undefined;
+  size?: 'sm' | 'md' | 'lg';
+  showTooltip?: boolean;
 }
 
-const VerificationBadge: React.FC<VerificationBadgeProps> = ({ verification, className }) => {
+const VerificationBadge: React.FC<VerificationBadgeProps> = ({
+  verification,
+  size = 'md',
+  showTooltip = true
+}) => {
   if (!verification) return null;
 
-  const badge = {
-    admin: {
-      icon: <Shield className="h-4 w-4 text-white" />,
-      tooltip: "Admin",
-      className: "bg-red-500 rounded-full p-0.5",
-    },
-    verified: {
-      icon: <Check className="h-4 w-4 text-white" />,
-      tooltip: "Verified",
-      className: "bg-blue-500 rounded-full p-0.5",
-    },
+  const sizeClasses = {
+    sm: "h-3 w-3",
+    md: "h-4 w-4",
+    lg: "h-5 w-5"
   };
 
-  const currentBadge = badge[verification];
+  const getBadgeContent = () => {
+    switch (verification) {
+      case 'verified':
+        return {
+          icon: <Check className={`${sizeClasses[size]} text-white`} strokeWidth={4} />,
+          bg: "bg-blue-500",
+          label: "Verified User"
+        };
+      case 'admin':
+        return {
+          icon: <Shield className={`${sizeClasses[size]} text-white`} fill="currentColor" />,
+          bg: "bg-red-500",
+          label: "Administrator"
+        };
+      case 'premium': // Example extension
+        return {
+            icon: <Award className={`${sizeClasses[size]} text-white`} />,
+            bg: "bg-yellow-500",
+            label: "Premium Member"
+        };
+      default:
+        return null;
+    }
+  };
+
+  const content = getBadgeContent();
+  if (!content) return null;
+
+  const BadgeElement = (
+    <span className={`inline-flex items-center justify-center rounded-full ${content.bg} p-0.5 ml-1`}>
+      {content.icon}
+    </span>
+  );
+
+  if (!showTooltip) return BadgeElement;
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={`${currentBadge.className} ${className}`}>
-            {currentBadge.icon}
-          </span>
+          {BadgeElement}
         </TooltipTrigger>
         <TooltipContent>
-          <p>{currentBadge.tooltip}</p>
+          <p>{content.label}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
