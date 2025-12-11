@@ -54,6 +54,7 @@ function Router() {
 }
 
 import { AuthProvider } from "@/hooks/use-auth";
+import { usePresence } from "@/hooks/use-presence";
 
 function App() {
   return (
@@ -74,6 +75,9 @@ function AppLayout() {
   const [isChapterReader] = useRoute("/chapter/:id");
   const [isChatPage] = useRoute("/room-chat");
   const [isPrivateChat] = useRoute("/messages");
+
+  // Activate presence tracking
+  usePresence();
 
   const showHeader = !isChapterReader && !isChatPage && !isPrivateChat;
   const showFooter = !isChapterReader && !isChatPage && !isPrivateChat;
