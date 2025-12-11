@@ -10,6 +10,7 @@ Proyek ini telah diperbarui untuk menyertakan fitur-fitur berikut:
 *   **Favorit**: Pengguna dapat menyimpan manhwa favorit mereka.
 *   **Riwayat Baca**: Aplikasi secara otomatis menyimpan chapter terakhir yang dibaca oleh pengguna.
 *   **Keamanan**: Integrasi Cloudflare Turnstile untuk mencegah spam pendaftaran.
+*   **Notifikasi & Pengumuman**: Fitur notifikasi mengambang yang dapat dikonfigurasi admin.
 
 Untuk menjalankan fitur-fitur ini, Anda perlu membuat dan mengkonfigurasi proyek Firebase Anda sendiri.
 
@@ -64,6 +65,7 @@ service cloud.firestore {
     // Aturan untuk dokumen pengguna utama (profil)
     match /users/{userId} {
       // Izinkan semua pengguna yang login untuk melihat profil pengguna lain (untuk search & chat)
+      // Dan untuk menghitung statistik pengguna online
       allow read: if request.auth != null;
       // Hanya pemilik akun atau admin yang bisa mengedit
       allow write: if request.auth != null &&
@@ -82,6 +84,15 @@ service cloud.firestore {
       allow read: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
       // Koleksi admin hanya boleh dikelola dari Firebase Console, bukan dari aplikasi
       allow write: if false;
+    }
+
+    // Aturan untuk konfigurasi settings (Notifikasi Mengambang)
+    match /settings/{document=**} {
+      // Siapa saja bisa membaca konfigurasi (untuk menampilkan notifikasi)
+      allow read: if true;
+      // Hanya admin yang bisa mengubah pengaturan
+      // Pastikan UID Admin sudah ada di koleksi 'admins'
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // Aturan untuk koleksi 'leaderboard'
