@@ -5,19 +5,19 @@ import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/seo';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '@/firebaseConfig';
-import { useLocation, Link } from 'wouter';
-import { Loader2, AlertCircle, LogOut, Save, Edit, Camera, Link as LinkIcon, BookOpen, Star } from 'lucide-react';
+import { useLocation, Link, useRoute } from 'wouter';
+import { Loader2, AlertCircle, LogOut, Save, Edit, Camera, Link as LinkIcon, BookOpen, Star, MessageCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { User } from 'shared/types'; // Assuming types are in shared
 import { MessageSquare, Github, Instagram, Music } from 'lucide-react';
 import VerificationBadge from '@/components/ui/verification-badge';
+import { User } from '@shared/types'; // Corrected import path
 
 const profileSchema = z.object({
   nickname: z.string().min(3, 'Nickname must be at least 3 characters').max(20, 'Nickname must be at most 20 characters'),
@@ -46,42 +46,79 @@ const  cleanObject = (obj: any) => {
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
-  const { data: userData, updateProfileCache, invalidateProfile } = useUserProfile();
+  const { data: currentUserProfile, updateProfileCache, invalidateProfile } = useUserProfile();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const [match, params] = useRoute("/user/:uid");
+  const targetUid = match ? params?.uid : user?.uid;
+  const isOwnProfile = user && targetUid === user.uid;
+
+  const [targetUserProfile, setTargetUserProfile] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, setValue } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
   });
 
-  useEffect(() => {
-    if (userData) {
-      setValue('nickname', userData.nickname);
-      setValue('bio', userData.bio);
-      setValue('socialLinks', userData.socialLinks);
-    }
+  // Decide which data to display
+  const displayProfile = isOwnProfile ? currentUserProfile : targetUserProfile;
 
-    if (user) {
-      const fetchFavorites = async () => {
-        const favoritesRef = collection(db, 'users', user.uid, 'favorites');
+  // Initialize form with current user data if viewing own profile
+  useEffect(() => {
+    if (isOwnProfile && currentUserProfile) {
+      setValue('nickname', currentUserProfile.nickname);
+      setValue('bio', currentUserProfile.bio);
+      setValue('socialLinks', currentUserProfile.socialLinks);
+    }
+  }, [isOwnProfile, currentUserProfile, setValue]);
+
+  // Fetch target user data if not own profile
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      if (!targetUid) return;
+
+      setLoading(true);
+      try {
+        if (isOwnProfile) {
+           // Wait for hook to load
+           if (currentUserProfile) setLoading(false);
+        } else {
+            const userDocRef = doc(db, 'users', targetUid);
+            const userSnap = await getDoc(userDocRef);
+            if (userSnap.exists()) {
+                setTargetUserProfile({ uid: targetUid, ...userSnap.data() } as User);
+            } else {
+                setTargetUserProfile(null);
+            }
+            setLoading(false);
+        }
+
+        // Fetch Favorites (allowed for both own and public now)
+        const favoritesRef = collection(db, 'users', targetUid, 'favorites');
         const q = query(favoritesRef);
         const querySnapshot = await getDocs(q);
         const favs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setFavorites(favs);
-      };
 
-      fetchFavorites();
-    }
-  }, [user, userData, setValue]);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        toast({ title: 'Error', description: 'Failed to load profile data.', variant: 'destructive' });
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [targetUid, isOwnProfile, currentUserProfile]);
+
 
   const onSubmit = async (data: ProfileFormValues) => {
-    if (!user || !userData) return;
+    if (!user || !isOwnProfile) return;
     const userDocRef = doc(db, 'users', user.uid);
     const leaderboardDocRef = doc(db, 'leaderboard', user.uid);
     try {
-      const updatedUserData = cleanObject({ ...userData, ...data });
+      const updatedUserData = cleanObject({ ...currentUserProfile, ...data });
 
       // Optimistic Update
       updateProfileCache(updatedUserData);
@@ -108,7 +145,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleImageUpload = async (file: File, type: 'photo' | 'banner') => {
-    if (!user || !userData) return;
+    if (!user || !currentUserProfile) return;
 
     const formData = new FormData();
     formData.append('file', file);
@@ -149,27 +186,73 @@ const ProfilePage: React.FC = () => {
     navigate('/');
   };
 
-  if (!user) {
+  const handleSendMessage = async () => {
+      if (!user || !displayProfile) return;
+
+      // Navigate to messages
+      // Ideally, we should initialize the chat here, but PrivateChat component handles creation on load if it knows who to talk to.
+      // Since PrivateChat uses a list selection model, we might need to pass state or create the chat document first.
+
+      // Let's pre-create the chat doc here to ensure it exists, then navigate
+      try {
+          const participants = [user.uid, displayProfile.uid].sort();
+          const chatId = participants.join('_');
+          const chatRef = doc(db, 'private_chats', chatId);
+
+          // We can just navigate to messages?
+          // The current PrivateChat implementation doesn't support opening a specific chat via URL.
+          // It relies on clicking the user in the list.
+
+          // However, we can create the chat document so it appears in the list.
+          await setDoc(chatRef, {
+            participants: participants,
+            createdAt: serverTimestamp(),
+            lastMessage: '',
+            lastMessageTime: serverTimestamp(),
+            unreadCounts: { [user.uid]: 0, [displayProfile.uid]: 0 }
+          }, { merge: true });
+
+          toast({ title: "Chat Started", description: "Navigating to messages..." });
+          navigate('/messages');
+
+      } catch (error) {
+          console.error("Failed to start chat", error);
+          toast({ title: "Error", description: "Failed to start chat" });
+      }
+  };
+
+  if (loading) {
+      return (
+          <div className="flex justify-center items-center h-screen">
+              <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+      );
+  }
+
+  if (!displayProfile) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-20 text-center">
         <AlertCircle className="h-16 w-16 mx-auto text-destructive mb-4" />
-        <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-        <p className="text-muted-foreground">You must be logged in to view your profile.</p>
+        <h2 className="text-2xl font-bold mb-2">User Not Found</h2>
+        <p className="text-muted-foreground">The user you are looking for does not exist.</p>
+        <Button onClick={() => navigate('/')} className="mt-4">Go Home</Button>
       </div>
     );
   }
 
   return (
     <div className="bg-background text-foreground">
-      <SEO title="My Profile" description="Manage your profile information and preferences." />
+      <SEO title={displayProfile.nickname || "Profile"} description={`View ${displayProfile.nickname}'s profile.`} />
 
       {/* Banner */}
       <div className="relative h-48 bg-muted group">
-        <img src={userData?.bannerUrl || 'https://via.placeholder.com/1500x500'} alt="Banner" className="w-full h-full object-cover" />
-        <label htmlFor="banner-upload" className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-          <Camera className="h-8 w-8 text-white" />
-          <input id="banner-upload" type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleImageUpload(e.target.files[0], 'banner')} />
-        </label>
+        <img src={displayProfile.bannerUrl || 'https://via.placeholder.com/1500x500'} alt="Banner" className="w-full h-full object-cover" />
+        {isOwnProfile && (
+            <label htmlFor="banner-upload" className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+            <Camera className="h-8 w-8 text-white" />
+            <input id="banner-upload" type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleImageUpload(e.target.files[0], 'banner')} />
+            </label>
+        )}
       </div>
 
       <div className="container mx-auto max-w-4xl px-4 pb-12 -mt-16">
@@ -177,27 +260,41 @@ const ProfilePage: React.FC = () => {
           {/* Profile Picture */}
           <div className="relative group">
             <Avatar className="h-32 w-32 border-4 border-background">
-              <AvatarImage src={userData?.photoUrl || undefined} alt={userData?.nickname || 'User'} />
-              <AvatarFallback>{userData?.nickname?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+              <AvatarImage src={displayProfile.photoUrl || undefined} alt={displayProfile.nickname || 'User'} />
+              <AvatarFallback>{displayProfile.nickname?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
-            <label htmlFor="photo-upload" className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="h-6 w-6 text-white" />
-              <input id="photo-upload" type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleImageUpload(e.target.files[0], 'photo')} />
-            </label>
+            {isOwnProfile && (
+                <label htmlFor="photo-upload" className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="h-6 w-6 text-white" />
+                <input id="photo-upload" type="file" className="hidden" accept="image/*" onChange={(e) => e.target.files && handleImageUpload(e.target.files[0], 'photo')} />
+                </label>
+            )}
           </div>
-          <div className="ml-4">
+          <div className="ml-4 flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">{userData?.nickname || 'User'}</h1>
-              <VerificationBadge verification={userData?.verification} />
+              <h1 className="text-3xl font-bold">{displayProfile.nickname || 'User'}</h1>
+              <VerificationBadge verification={displayProfile.verification} />
             </div>
-            <p className="text-muted-foreground">{user.email}</p>
+            {/* We might not want to show email for other users for privacy */}
+            {isOwnProfile && <p className="text-muted-foreground">{user?.email}</p>}
           </div>
-          <Button variant="outline" size="icon" className="ml-auto" onClick={() => setIsEditing(!isEditing)}>
-            <Edit className="h-4 w-4" />
-          </Button>
+
+          <div className="flex gap-2">
+            {!isOwnProfile && user && (
+                <Button onClick={handleSendMessage} className="gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Message
+                </Button>
+            )}
+            {isOwnProfile && (
+                <Button variant="outline" size="icon" onClick={() => setIsEditing(!isEditing)}>
+                    <Edit className="h-4 w-4" />
+                </Button>
+            )}
+          </div>
         </div>
 
-        {isEditing ? (
+        {isEditing && isOwnProfile ? (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label htmlFor="nickname" className="block text-sm font-medium mb-1">Nickname</label>
@@ -240,21 +337,21 @@ const ProfilePage: React.FC = () => {
           <div className="space-y-8">
             <div>
               <h2 className="text-xl font-semibold mb-2">Bio</h2>
-              <p className="text-muted-foreground">{userData?.bio || 'No bio yet.'}</p>
+              <p className="text-muted-foreground">{displayProfile.bio || 'No bio yet.'}</p>
             </div>
 
             <div className="flex items-center space-x-4">
-              {userData?.socialLinks?.whatsapp && <a href={userData.socialLinks.whatsapp} target="_blank" rel="noopener noreferrer"><MessageSquare /></a>}
-              {userData?.socialLinks?.github && <a href={userData.socialLinks.github} target="_blank" rel="noopener noreferrer"><Github /></a>}
-              {userData?.socialLinks?.instagram && <a href={userData.socialLinks.instagram} target="_blank" rel="noopener noreferrer"><Instagram /></a>}
-              {userData?.socialLinks?.tiktok && <a href={userData.socialLinks.tiktok} target="_blank" rel="noopener noreferrer"><Music /></a>}
-              {userData?.socialLinks?.other && <a href={userData.socialLinks.other} target="_blank" rel="noopener noreferrer"><LinkIcon /></a>}
+              {displayProfile.socialLinks?.whatsapp && <a href={displayProfile.socialLinks.whatsapp} target="_blank" rel="noopener noreferrer"><MessageSquare /></a>}
+              {displayProfile.socialLinks?.github && <a href={displayProfile.socialLinks.github} target="_blank" rel="noopener noreferrer"><Github /></a>}
+              {displayProfile.socialLinks?.instagram && <a href={displayProfile.socialLinks.instagram} target="_blank" rel="noopener noreferrer"><Instagram /></a>}
+              {displayProfile.socialLinks?.tiktok && <a href={displayProfile.socialLinks.tiktok} target="_blank" rel="noopener noreferrer"><Music /></a>}
+              {displayProfile.socialLinks?.other && <a href={displayProfile.socialLinks.other} target="_blank" rel="noopener noreferrer"><LinkIcon /></a>}
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-center">
               <div className="bg-muted p-4 rounded-lg">
                 <BookOpen className="h-6 w-6 mx-auto mb-2" />
-                <p className="text-2xl font-bold">{userData?.chaptersRead || 0}</p>
+                <p className="text-2xl font-bold">{displayProfile.chaptersRead || 0}</p>
                 <p className="text-sm text-muted-foreground">Chapters Read</p>
               </div>
               <div className="bg-muted p-4 rounded-lg">
@@ -265,25 +362,31 @@ const ProfilePage: React.FC = () => {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">My Favorites</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {favorites.map(fav => (
-                  <Link key={fav.id} to={`/manhwa/${fav.slug}`}>
-                    <div className="group">
-                      <img src={fav.imageSrc} alt={fav.title} className="w-full h-auto object-cover rounded-md mb-2 transition-transform duration-300 group-hover:scale-105" />
-                      <p className="text-sm font-semibold truncate">{fav.title}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <h2 className="text-xl font-semibold mb-4">Favorites</h2>
+              {favorites.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {favorites.map(fav => (
+                    <Link key={fav.id} href={`/manhwa/${fav.slug}`}>
+                        <div className="group cursor-pointer">
+                        <img src={fav.imageSrc} alt={fav.title} className="w-full h-auto object-cover rounded-md mb-2 transition-transform duration-300 group-hover:scale-105" />
+                        <p className="text-sm font-semibold truncate">{fav.title}</p>
+                        </div>
+                    </Link>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No favorites yet.</p>
+              )}
             </div>
           </div>
         )}
 
-        <Button onClick={handleLogout} variant="destructive" className="gap-2 mt-8">
-          <LogOut className="h-4 w-4" />
-          <span>Logout</span>
-        </Button>
+        {isOwnProfile && (
+            <Button onClick={handleLogout} variant="destructive" className="gap-2 mt-8">
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
+            </Button>
+        )}
       </div>
     </div>
   );

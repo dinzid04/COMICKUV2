@@ -10,6 +10,8 @@ Proyek ini telah diperbarui untuk menyertakan fitur-fitur berikut:
 *   **Favorit**: Pengguna dapat menyimpan manhwa favorit mereka.
 *   **Riwayat Baca**: Aplikasi secara otomatis menyimpan chapter terakhir yang dibaca oleh pengguna.
 *   **Keamanan**: Integrasi Cloudflare Turnstile untuk mencegah spam pendaftaran.
+*   **Notifikasi & Pengumuman**: Fitur notifikasi mengambang yang dapat dikonfigurasi admin.
+*   **Manajemen Chat**: Admin dapat menghapus semua pesan di chat komunitas.
 
 Untuk menjalankan fitur-fitur ini, Anda perlu membuat dan mengkonfigurasi proyek Firebase Anda sendiri.
 
@@ -61,10 +63,25 @@ Aturan keamanan sangat penting untuk melindungi data Anda.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Aturan untuk data pengguna dan semua sub-koleksinya (favorites, history, dll.)
-    match /users/{userId}/{document=**} {
-      // Pengguna dapat membaca dan menulis ke data mereka sendiri.
-      // Admin juga dapat membaca dan menulis ke data pengguna mana pun.
+    // Aturan untuk dokumen pengguna utama (profil)
+    match /users/{userId} {
+      // Izinkan semua pengguna yang login untuk melihat profil pengguna lain (untuk search & chat)
+      // Dan untuk menghitung statistik pengguna online
+      allow read: if request.auth != null;
+      // Hanya pemilik akun atau admin yang bisa mengedit
+      allow write: if request.auth != null &&
+        (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Aturan untuk sub-koleksi pengguna
+    // Favorites: Bisa dibaca publik (untuk fitur lihat profil user lain), tapi hanya bisa diedit pemilik
+    match /users/{userId}/favorites/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Sub-koleksi lain (history, dll) - Tetap Privat
+    match /users/{userId}/{subcollection}/{document=**} {
       allow read, write: if request.auth != null &&
         (request.auth.uid == userId || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
@@ -75,6 +92,15 @@ service cloud.firestore {
       allow read: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
       // Koleksi admin hanya boleh dikelola dari Firebase Console, bukan dari aplikasi
       allow write: if false;
+    }
+
+    // Aturan untuk konfigurasi settings (Notifikasi Mengambang)
+    match /settings/{document=**} {
+      // Siapa saja bisa membaca konfigurasi (untuk menampilkan notifikasi)
+      allow read: if true;
+      // Hanya admin yang bisa mengubah pengaturan
+      // Pastikan UID Admin sudah ada di koleksi 'admins'
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // Aturan untuk koleksi 'leaderboard'
@@ -107,12 +133,15 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // Aturan untuk Room Chat
+    // Aturan untuk Room Chat (DIPERBARUI UNTUK ADMIN DELETE ALL)
     match /chat_messages/{messageId} {
       // Hanya pengguna yang sudah login yang dapat membaca dan mengirim pesan
       allow read, create: if request.auth != null;
-      // Pengguna hanya bisa mengedit atau menghapus pesannya sendiri
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Pengguna bisa hapus pesan sendiri, Admin bisa hapus semua (atau update)
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
     // Aturan untuk profil pengguna publik (untuk fitur @mention)
@@ -121,6 +150,24 @@ service cloud.firestore {
       allow read: if true;
       // Pengguna hanya bisa membuat atau mengubah profilnya sendiri
       allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Aturan untuk Private Chat
+    match /private_chats/{chatId} {
+      // Pengguna bisa membuat chat baru jika mereka termasuk dalam partisipan
+      allow create: if request.auth != null;
+      // Pengguna bisa membaca chat jika UID mereka ada di array 'participants'
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+       // Pengguna bisa mengupdate chat (misal: lastMessage) jika mereka partisipan
+      allow update: if request.auth != null && request.auth.uid in resource.data.participants;
+
+      // Aturan untuk sub-koleksi messages
+      match /messages/{messageId} {
+        // Pengguna bisa membaca pesan jika mereka punya akses ke dokumen chat induk
+        allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants;
+        // Pengguna bisa mengirim pesan jika mereka punya akses ke dokumen chat induk
+        allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants;
+      }
     }
   }
 }

@@ -7,6 +7,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BottomNavbar } from "@/components/bottom-navbar";
+import { FloatingNotification } from "@/components/floating-notification";
+import SecurityCheck from "@/components/security-check";
+import { useState, useEffect } from "react";
 
 // Pages
 import Home from "@/pages/home";
@@ -23,6 +26,7 @@ import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
 import LeaderboardPage from "@/pages/leaderboard";
 import RoomChat from "@/pages/RoomChat";
+import PrivateChat from "@/pages/PrivateChat";
 import NotFound from "@/pages/not-found";
 import { ProtectedRoute } from "@/components/protected-route";
 
@@ -40,8 +44,10 @@ function Router() {
       <Route path="/login" component={AuthPage} />
       <Route path="/register" component={AuthPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/user/:uid" component={ProfilePage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/room-chat" component={RoomChat} />
+      <Route path="/messages" component={PrivateChat} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/search/:query" component={SearchPage} />
       <Route path="/manhwa/:id" component={ManhwaDetail} />
@@ -52,6 +58,7 @@ function Router() {
 }
 
 import { AuthProvider } from "@/hooks/use-auth";
+import { usePresence } from "@/hooks/use-presence";
 
 function App() {
   return (
@@ -71,11 +78,37 @@ function App() {
 function AppLayout() {
   const [isChapterReader] = useRoute("/chapter/:id");
   const [isChatPage] = useRoute("/room-chat");
+  const [isPrivateChat] = useRoute("/messages");
+  const [isVerified, setIsVerified] = useState(false);
 
-  const showHeader = !isChapterReader && !isChatPage;
-  const showFooter = !isChapterReader && !isChatPage;
-  const mainPadding = !isChapterReader && !isChatPage ? "pb-16 md:pb-0" : "";
+  // Check session storage on mount
+  useEffect(() => {
+    const verified = sessionStorage.getItem("turnstile_verified");
+    if (verified === "true") {
+      setIsVerified(true);
+    }
+  }, []);
 
+  const handleVerification = () => {
+    sessionStorage.setItem("turnstile_verified", "true");
+    setIsVerified(true);
+  };
+
+  // Activate presence tracking only if verified (optional, but good practice)
+  usePresence();
+
+  const showHeader = !isChapterReader && !isChatPage && !isPrivateChat;
+  const showFooter = !isChapterReader && !isChatPage && !isPrivateChat;
+  const mainPadding = !isChapterReader && !isChatPage && !isPrivateChat ? "pb-16 md:pb-0" : "";
+
+  if (!isVerified) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <SecurityCheck onVerify={handleVerification} />
+        <Toaster />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -85,6 +118,7 @@ function AppLayout() {
       </main>
       {showFooter && <Footer />}
       {showFooter && <BottomNavbar />}
+      <FloatingNotification />
     </div>
   );
 }

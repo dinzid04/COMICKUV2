@@ -1,0 +1,662 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { db } from '@/firebaseConfig';
+import {
+  collection, query, orderBy, onSnapshot, addDoc,
+  serverTimestamp, getDocs, where, limit, doc,
+  setDoc, getDoc, updateDoc, Timestamp, increment
+} from 'firebase/firestore';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from "@/hooks/use-toast";
+import { Send, Search, ArrowLeft, MessageSquarePlus, User as UserIcon, Users } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { User as AppUser } from '@shared/types';
+import VerificationBadge from '@/components/ui/verification-badge';
+import ChatHeader from '@/components/chat-header';
+import DOMPurify from 'dompurify';
+
+// Interfaces
+interface PrivateMessage {
+  id: string;
+  senderId: string;
+  text: string;
+  createdAt: any;
+  read: boolean;
+}
+
+interface ChatConversation {
+  id: string; // The chat document ID (uid1_uid2)
+  otherUser: AppUser; // The other participant's details
+  lastMessage: string;
+  lastMessageTime: any;
+  participants: string[];
+  unreadCount?: number;
+}
+
+// Interfaces for Community Chat
+interface CommunityMessage {
+  id: string;
+  userId: string;
+  displayName: string;
+  photoURL: string;
+  text: string;
+  createdAt: any;
+  mentions?: string[];
+  verification?: 'admin' | 'verified' | null;
+}
+
+const PrivateChat: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  // State
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChatUser, setActiveChatUser] = useState<AppUser | null>(null);
+
+  // Community Chat State
+  const [isCommunityChat, setIsCommunityChat] = useState(false);
+  const [communityMessages, setCommunityMessages] = useState<CommunityMessage[]>([]);
+  const [communityLastMessage, setCommunityLastMessage] = useState<string>('');
+  const [communityLastTime, setCommunityLastTime] = useState<any>(null);
+  const [mentionUsers, setMentionUsers] = useState<AppUser[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentions, setMentions] = useState<string[]>([]);
+
+  const [messages, setMessages] = useState<PrivateMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<AppUser[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false); // For mobile view toggling
+
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+
+  // Scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, communityMessages, activeChatId, isCommunityChat]);
+
+  // Load Conversations List
+  useEffect(() => {
+    if (!user) return;
+
+    // Query chats where I am a participant
+    const q = query(
+      collection(db, 'private_chats'),
+      where('participants', 'array-contains', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const chats: ChatConversation[] = [];
+
+      for (const docSnapshot of snapshot.docs) {
+        const data = docSnapshot.data();
+        const otherUserId = data.participants.find((uid: string) => uid !== user.uid);
+
+        if (otherUserId) {
+          // Fetch other user's profile
+          const userDocRef = doc(db, 'users', otherUserId);
+          const userDocSnap = await getDoc(userDocRef);
+
+          let otherUserData: AppUser;
+          if (userDocSnap.exists()) {
+             otherUserData = { uid: otherUserId, ...userDocSnap.data() } as AppUser;
+          } else {
+             // Fallback
+             otherUserData = {
+               uid: otherUserId,
+               nickname: 'Unknown User',
+               username: 'unknown',
+               photoUrl: null,
+               role: 'user'
+             } as AppUser;
+          }
+
+          chats.push({
+            id: docSnapshot.id,
+            otherUser: otherUserData,
+            lastMessage: data.lastMessage || '',
+            lastMessageTime: data.lastMessageTime,
+            participants: data.participants,
+            unreadCount: data.unreadCounts?.[user.uid] || 0
+          });
+        }
+      }
+
+      // Sort client-side by lastMessageTime descending
+      chats.sort((a, b) => {
+        const timeA = a.lastMessageTime?.toMillis() || 0;
+        const timeB = b.lastMessageTime?.toMillis() || 0;
+        return timeB - timeA;
+      });
+
+      setConversations(chats);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Load Community Chat Preview (Last Message)
+  useEffect(() => {
+    const q = query(collection(db, 'chat_messages'), orderBy('createdAt', 'desc'), limit(1));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+            const data = snapshot.docs[0].data();
+            setCommunityLastMessage(`${data.displayName}: ${data.text}`);
+            setCommunityLastTime(data.createdAt);
+        } else {
+            setCommunityLastMessage('Belum ada pesan');
+        }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Reset Unread Count when Chat is Opened
+  useEffect(() => {
+    if (activeChatId && activeChatId !== 'community' && user) {
+        const chatRef = doc(db, 'private_chats', activeChatId);
+        updateDoc(chatRef, {
+            [`unreadCounts.${user.uid}`]: 0
+        }).catch(err => console.log("Failed to reset unread count (might be new chat)", err));
+    }
+  }, [activeChatId, user]);
+
+  // Load Messages for Active Chat
+  useEffect(() => {
+    if (!activeChatId) {
+        setMessages([]);
+        return;
+    }
+
+    if (activeChatId === 'community') return;
+
+    const q = query(
+      collection(db, 'private_chats', activeChatId, 'messages'),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as PrivateMessage));
+      setMessages(msgs);
+    });
+
+    return () => unsubscribe();
+  }, [activeChatId]);
+
+  // Load Community Messages
+  useEffect(() => {
+    if (activeChatId !== 'community') return;
+
+    const q = query(collection(db, 'chat_messages'), orderBy('createdAt', 'asc'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const messagesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityMessage));
+      setCommunityMessages(messagesData);
+    });
+    return () => unsubscribe();
+  }, [activeChatId]);
+
+  // Handle User Search
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsLoading(true);
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(
+        usersRef,
+        where('nickname', '>=', searchQuery),
+        where('nickname', '<=', searchQuery + '\uf8ff'),
+        limit(10)
+      );
+
+      const snapshot = await getDocs(q);
+      const results = snapshot.docs
+        .map(doc => ({ uid: doc.id, ...doc.data() } as AppUser))
+        .filter(u => u.uid !== user?.uid);
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Search error:", error);
+      toast({ title: "Error", description: "Gagal mencari user.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Start Chat with a User
+  const startChat = async (targetUser: AppUser) => {
+    if (!user) return;
+
+    const participants = [user.uid, targetUser.uid].sort();
+    const chatId = participants.join('_');
+
+    setActiveChatUser(targetUser);
+    setActiveChatId(chatId);
+    setIsCommunityChat(false);
+    setIsMobileChatOpen(true);
+    setIsSearching(false);
+    setSearchQuery('');
+    setSearchResults([]);
+
+    const chatRef = doc(db, 'private_chats', chatId);
+    try {
+      const chatSnap = await getDoc(chatRef);
+      if (!chatSnap.exists()) {
+        await setDoc(chatRef, {
+          participants: participants,
+          createdAt: serverTimestamp(),
+          lastMessage: '',
+          lastMessageTime: serverTimestamp(),
+          unreadCounts: { [user.uid]: 0, [targetUser.uid]: 0 }
+        });
+      }
+    } catch (error) {
+      console.log("Chat check failed, attempting to create:", error);
+      await setDoc(chatRef, {
+        participants: participants,
+        createdAt: serverTimestamp(),
+        lastMessage: '',
+        lastMessageTime: serverTimestamp(),
+        unreadCounts: { [user.uid]: 0, [targetUser.uid]: 0 }
+      });
+    }
+  };
+
+  const openCommunityChat = () => {
+      setActiveChatId('community');
+      setActiveChatUser(null);
+      setIsCommunityChat(true);
+      setIsMobileChatOpen(true);
+  };
+
+  const searchMentionUsers = async (queryStr: string) => {
+    if (queryStr.length === 0) {
+      setMentionUsers([]);
+      return;
+    }
+    const usersRef = collection(db, 'users');
+    const q = query(
+      usersRef,
+      where('nickname', '>=', queryStr),
+      where('nickname', '<=', queryStr + '\uf8ff'),
+      limit(5)
+    );
+    const querySnapshot = await getDocs(q);
+    const usersList = querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as AppUser));
+    setMentionUsers(usersList.filter(u => u.uid !== user?.uid));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setNewMessage(text);
+
+    if (activeChatId === 'community') {
+        const mentionMatch = text.match(/@(\w*)$/);
+        if (mentionMatch) {
+          setShowMentions(true);
+          searchMentionUsers(mentionMatch[1]);
+        } else {
+          setShowMentions(false);
+        }
+    }
+  };
+
+  const handleMentionSelect = (selectedUser: AppUser) => {
+    const currentMessage = newMessage.substring(0, newMessage.lastIndexOf('@'));
+    setNewMessage(`${currentMessage}@${selectedUser.nickname} `);
+    setMentions([...mentions, selectedUser.uid]);
+    setShowMentions(false);
+  };
+
+  // Send Message
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !activeChatId || !newMessage.trim()) return;
+
+    const text = newMessage.trim();
+    setNewMessage('');
+
+    try {
+      if (activeChatId === 'community') {
+         const userDocRef = doc(db, 'users', user.uid);
+         const userDocSnap = await getDoc(userDocRef);
+         const userData = userDocSnap.data();
+
+         const displayName = userData?.nickname || user.displayName || 'Anonymous';
+         const photoURL = userData?.photoUrl || user.photoURL || '';
+         const verification = userData?.verification || null;
+
+         await addDoc(collection(db, 'chat_messages'), {
+            userId: user.uid,
+            displayName: displayName,
+            photoURL: photoURL,
+            text: text,
+            createdAt: serverTimestamp(),
+            mentions: mentions,
+            verification: verification,
+         });
+         setMentions([]);
+      } else {
+          await addDoc(collection(db, 'private_chats', activeChatId, 'messages'), {
+            senderId: user.uid,
+            text: text,
+            createdAt: serverTimestamp(),
+            read: false
+          });
+
+          const chatRef = doc(db, 'private_chats', activeChatId);
+          const otherUserId = activeChatId.split('_').find(id => id !== user.uid);
+
+          const updates: any = {
+            lastMessage: text,
+            lastMessageTime: serverTimestamp()
+          };
+
+          if (otherUserId) {
+            updates[`unreadCounts.${otherUserId}`] = increment(1);
+          }
+
+          await updateDoc(chatRef, updates);
+      }
+
+    } catch (error) {
+      console.error("Send error:", error);
+      toast({ title: "Error", description: "Gagal mengirim pesan.", variant: "destructive" });
+    }
+  };
+
+  const formatTime = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate();
+    return formatDistanceToNow(date, { addSuffix: true, locale: id });
+  };
+
+  const highlightMentions = (text: string) => {
+    const rawHTML = text.replace(/@(\w+)/g, `<strong class="text-blue-400">@$1</strong>`);
+    return DOMPurify.sanitize(rawHTML);
+  };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center p-4">
+        <p>Silakan login untuk menggunakan fitur chat.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[100dvh] bg-gray-100 dark:bg-gray-900">
+      <div className="sticky top-0 z-50">
+        <ChatHeader />
+      </div>
+
+      <div className="flex flex-1 overflow-hidden relative">
+        <div className={`
+          w-full md:w-1/3 lg:w-1/4 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
+          ${isMobileChatOpen ? 'hidden md:flex' : 'flex'}
+        `}>
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center shrink-0">
+            <h2 className="font-bold text-lg">Pesan</h2>
+            <button
+              onClick={() => setIsSearching(!isSearching)}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Cari User"
+            >
+              {isSearching ? <ArrowLeft className="w-5 h-5" /> : <MessageSquarePlus className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {isSearching ? (
+            <div className="flex-1 flex flex-col p-4">
+               <form onSubmit={handleSearch} className="mb-4 flex gap-2">
+                 <input
+                   type="text"
+                   placeholder="Cari nickname..."
+                   className="flex-1 p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                   value={searchQuery}
+                   onChange={(e) => setSearchQuery(e.target.value)}
+                   autoFocus
+                 />
+                 <button type="submit" className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                   <Search className="w-5 h-5" />
+                 </button>
+               </form>
+
+               <div className="flex-1 overflow-y-auto">
+                 {isLoading ? (
+                   <div className="text-center p-4">Loading...</div>
+                 ) : searchResults.length > 0 ? (
+                   searchResults.map(u => (
+                     <div
+                       key={u.uid}
+                       onClick={() => startChat(u)}
+                       className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer rounded-lg mb-2"
+                     >
+                        <img
+                          src={u.photoUrl || "https://avatar.vercel.sh/fallback.png"}
+                          alt={u.nickname}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="font-semibold">{u.nickname}</p>
+                          <VerificationBadge verification={u.verification} />
+                        </div>
+                     </div>
+                   ))
+                 ) : searchQuery && (
+                   <p className="text-center text-gray-500">Tidak ada user ditemukan.</p>
+                 )}
+               </div>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto">
+              <div
+                onClick={openCommunityChat}
+                className={`
+                  flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-800
+                  ${activeChatId === 'community' ? 'bg-blue-50 dark:bg-gray-700' : ''}
+                `}
+              >
+                 <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline">
+                        <h3 className="font-semibold truncate">Komunitas Comicku</h3>
+                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                           {communityLastTime ? formatTime(communityLastTime) : ''}
+                        </span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {communityLastMessage}
+                    </p>
+                 </div>
+              </div>
+
+              {conversations.map(chat => (
+                  <div
+                    key={chat.id}
+                    onClick={() => {
+                      setActiveChatId(chat.id);
+                      setActiveChatUser(chat.otherUser);
+                      setIsCommunityChat(false);
+                      setIsMobileChatOpen(true);
+                    }}
+                    className={`
+                      flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-800
+                      ${activeChatId === chat.id ? 'bg-blue-50 dark:bg-gray-700' : ''}
+                    `}
+                  >
+                    <img
+                      src={chat.otherUser.photoUrl || "https://avatar.vercel.sh/fallback.png"}
+                      alt={chat.otherUser.nickname}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-baseline">
+                        <h3 className="font-semibold truncate">{chat.otherUser.nickname}</h3>
+                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                           {chat.lastMessageTime ? formatDistanceToNow(chat.lastMessageTime.toDate(), { locale: id }) : ''}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate flex-1">
+                            {chat.lastMessage}
+                          </p>
+                          {chat.unreadCount && chat.unreadCount > 0 ? (
+                              <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[1.25rem] text-center">
+                                  {chat.unreadCount}
+                              </span>
+                          ) : null}
+                      </div>
+                    </div>
+                  </div>
+              ))}
+
+              {conversations.length === 0 && (
+                <div className="p-8 text-center text-gray-500">
+                  <p>Belum ada percakapan pribadi.</p>
+                  <p className="text-sm mt-2">Mulai chat dengan teman baru!</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className={`
+          flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 h-full
+          ${!isMobileChatOpen ? 'hidden md:flex' : 'flex'}
+        `}>
+          {activeChatId ? (
+            <>
+              <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 shrink-0 sticky top-0 z-40">
+                <button
+                  onClick={() => setIsMobileChatOpen(false)}
+                  className="md:hidden p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                {activeChatId === 'community' ? (
+                    <>
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h2 className="font-bold flex items-center gap-1">
+                            Komunitas Comicku
+                            <VerificationBadge verification="verified" />
+                          </h2>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <img
+                           src={activeChatUser?.photoUrl || "https://avatar.vercel.sh/fallback.png"}
+                           alt={activeChatUser?.nickname}
+                           className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <h2 className="font-bold flex items-center gap-1">
+                            {activeChatUser?.nickname}
+                            <VerificationBadge verification={activeChatUser?.verification} />
+                          </h2>
+                        </div>
+                    </>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+                {(activeChatId === 'community' ? communityMessages : messages).map(msg => (
+                  <div key={msg.id} className={`flex items-start gap-3 ${(msg as any).userId === user.uid || (msg as any).senderId === user.uid ? 'justify-end' : ''}`}>
+                    {((msg as any).userId !== user.uid && (msg as any).senderId !== user.uid) && (
+                      <img
+                        src={activeChatId === 'community'
+                             ? ((msg as CommunityMessage).photoURL || "https://avatar.vercel.sh/fallback.png")
+                             : (activeChatUser?.photoUrl || "https://avatar.vercel.sh/fallback.png")
+                        }
+                        className="w-8 h-8 rounded-full"
+                        alt="Sender"
+                      />
+                    )}
+                    <div className={`flex flex-col ${(msg as any).userId === user.uid || (msg as any).senderId === user.uid ? 'items-end' : 'items-start'}`}>
+                      <div className={`
+                        max-w-md p-3 rounded-2xl
+                        ${(msg as any).userId === user.uid || (msg as any).senderId === user.uid
+                          ? 'bg-blue-600 text-white rounded-br-none'
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none shadow-sm'
+                        }
+                      `}>
+                         {activeChatId === 'community' && (msg as any).userId !== user.uid && (
+                             <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-xs opacity-70">{(msg as CommunityMessage).displayName}</span>
+                                <VerificationBadge verification={(msg as CommunityMessage).verification} />
+                             </div>
+                         )}
+                         {activeChatId === 'community' ? (
+                            <p dangerouslySetInnerHTML={{ __html: highlightMentions(msg.text) }}></p>
+                         ) : (
+                            <p>{msg.text}</p>
+                         )}
+                      </div>
+                      <span className="text-xs text-gray-400 mt-1">
+                        {formatTime(msg.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0 sticky bottom-0 z-40 relative">
+                 {showMentions && mentionUsers.length > 0 && activeChatId === 'community' && (
+                  <div className="absolute bottom-full left-0 right-0 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-t-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                    {mentionUsers.map(u => (
+                      <div key={u.uid} onClick={() => handleMentionSelect(u)} className="flex items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer">
+                        <img src={u.photoUrl || "https://avatar.vercel.sh/fallback.png"} alt={u.nickname} className="w-8 h-8 rounded-full mr-3" />
+                        <span className="font-semibold text-gray-900 dark:text-white">{u.nickname}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={handleInputChange}
+                    placeholder={activeChatId === 'community' ? "Ketik pesan (@ untuk mention)..." : "Ketik pesan..."}
+                    className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-full bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newMessage.trim()}
+                    className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </form>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8">
+              <MessageSquarePlus className="w-16 h-16 mb-4 opacity-20" />
+              <p className="text-lg">Pilih percakapan atau mulai chat baru.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PrivateChat;
