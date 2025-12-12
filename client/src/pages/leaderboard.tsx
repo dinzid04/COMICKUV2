@@ -6,12 +6,14 @@ import { SEO } from '@/components/seo';
 import { Loader2, AlertCircle, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLocation } from 'wouter';
+import { calculateLevel } from '@/lib/gamification';
 
 interface LeaderboardUser {
   uid: string;
   nickname: string;
   photoUrl?: string;
   chaptersRead: number;
+  xp?: number;
 }
 
 const LeaderboardPage: React.FC = () => {
@@ -74,9 +76,13 @@ const LeaderboardPage: React.FC = () => {
             </Avatar>
             <div className="flex-1">
               <p className="font-semibold">{user.nickname}</p>
+              <p className="text-xs text-muted-foreground">Level {calculateLevel(user.xp || 0)}</p>
             </div>
-            <div className="text-lg font-bold">
-              {user.chaptersRead}
+            <div className="text-right">
+                <div className="text-lg font-bold">
+                    {user.chaptersRead}
+                </div>
+                <div className="text-xs text-muted-foreground">Chapters</div>
             </div>
           </div>
         ))}

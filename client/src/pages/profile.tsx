@@ -6,7 +6,7 @@ import { SEO } from '@/components/seo';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '@/firebaseConfig';
 import { useLocation, Link, useRoute } from 'wouter';
-import { Loader2, AlertCircle, LogOut, Save, Edit, Camera, Link as LinkIcon, BookOpen, Star, MessageCircle } from 'lucide-react';
+import { Loader2, AlertCircle, LogOut, Save, Edit, Camera, Link as LinkIcon, Star, MessageCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,9 +15,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { doc, setDoc, getDoc, collection, getDocs, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Github, Instagram, Music } from 'lucide-react';
+import { MessageSquare, Github, Instagram, Music, BookOpen, Library, Trophy, Crown } from 'lucide-react';
 import VerificationBadge from '@/components/ui/verification-badge';
 import { User } from '@shared/types';
+import { calculateLevel, calculateProgress, getEarnedBadges, Badge } from '@/lib/gamification';
+import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const profileSchema = z.object({
   nickname: z.string().min(3, 'Nickname must be at least 3 characters').max(20, 'Nickname must be at most 20 characters'),
@@ -383,6 +386,65 @@ const ProfilePage: React.FC = () => {
               {displayProfile.socialLinks?.instagram && <a href={displayProfile.socialLinks.instagram} target="_blank" rel="noopener noreferrer"><Instagram /></a>}
               {displayProfile.socialLinks?.tiktok && <a href={displayProfile.socialLinks.tiktok} target="_blank" rel="noopener noreferrer"><Music /></a>}
               {displayProfile.socialLinks?.other && <a href={displayProfile.socialLinks.other} target="_blank" rel="noopener noreferrer"><LinkIcon /></a>}
+            </div>
+
+            {/* Gamification Stats */}
+            <div className="space-y-4 bg-muted/50 p-6 rounded-xl border border-border">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                           Level {calculateLevel(displayProfile.xp || 0)}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                           {displayProfile.xp || 0} XP Total
+                        </p>
+                    </div>
+                    <Trophy className="text-yellow-500 h-8 w-8" />
+                </div>
+
+                <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Progress to Level {calculateLevel(displayProfile.xp || 0) + 1}</span>
+                        <span>{Math.round(calculateProgress(displayProfile.xp || 0, calculateLevel(displayProfile.xp || 0)))}%</span>
+                    </div>
+                    <Progress value={calculateProgress(displayProfile.xp || 0, calculateLevel(displayProfile.xp || 0))} className="h-2" />
+                </div>
+
+                <div>
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        Badges Earned
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                        {getEarnedBadges(displayProfile).map((badge) => {
+                             // Dynamic icon rendering based on string name
+                             const IconComponent = {
+                                'BookOpen': BookOpen,
+                                'Library': Library,
+                                'Trophy': Trophy,
+                                'Crown': Crown
+                             }[badge.icon] || Trophy;
+
+                             return (
+                                <TooltipProvider key={badge.id}>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                                <IconComponent className="h-5 w-5" />
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="font-bold">{badge.name}</p>
+                                            <p className="text-xs">{badge.description}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                             );
+                        })}
+                        {getEarnedBadges(displayProfile).length === 0 && (
+                            <p className="text-xs text-muted-foreground italic">No badges earned yet. Keep reading!</p>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-center">

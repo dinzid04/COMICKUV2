@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebaseConfig";
 import { doc, setDoc, getDoc, increment } from "firebase/firestore";
 import { AutoScrollControls } from "@/components/auto-scroll-controls";
+import { XP_PER_CHAPTER } from "@/lib/gamification";
+import { useToast } from "@/hooks/use-toast";
 
 interface ManhwaState {
   manhwaId: string;
@@ -27,6 +29,7 @@ export default function ChapterReader() {
   const [scrollSpeed, setScrollSpeed] = useState(1);
   const [showControls, setShowControls] = useState(false);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const storedState = sessionStorage.getItem('currentManhwa');
@@ -65,7 +68,11 @@ export default function ChapterReader() {
         const userDocRef = doc(db, 'users', user.uid);
         const leaderboardDocRef = doc(db, 'leaderboard', user.uid);
         try {
-          await setDoc(userDocRef, { chaptersRead: increment(1) }, { merge: true });
+          // Increment chapters read AND XP
+          await setDoc(userDocRef, {
+            chaptersRead: increment(1),
+            xp: increment(XP_PER_CHAPTER)
+          }, { merge: true });
 
           // Update leaderboard
           const userDoc = await getDoc(userDocRef);
@@ -73,13 +80,16 @@ export default function ChapterReader() {
             const userData = userDoc.data();
             await setDoc(leaderboardDocRef, {
               chaptersRead: userData.chaptersRead,
+              xp: userData.xp || 0, // Sync XP to leaderboard
               nickname: userData.nickname,
               photoUrl: userData.photoUrl,
               uid: user.uid
             }, { merge: true });
+
+            // Optional: Check for level up notification could go here if we tracked previous level
           }
         } catch (error) {
-          console.error("Error incrementing chapters read:", error);
+          console.error("Error incrementing chapters/xp:", error);
         }
       };
       saveHistory();
