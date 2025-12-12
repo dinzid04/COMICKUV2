@@ -161,6 +161,14 @@ service cloud.firestore {
        allow create: if true; // Allow creation if doesn't exist (first run)
     }
 
+    // Aturan untuk Donasi
+    match /donations/{donationId} {
+      allow read: if true; // Public leaderboard
+      // Write is handled by Server-side Webhook or Admin SDK ideally.
+      // If using Client SDK from server for now, allow create.
+      allow create: if true;
+    }
+
     // Aturan untuk Private Chat
     match /private_chats/{chatId} {
       // Pengguna bisa membuat chat baru jika mereka termasuk dalam partisipan
@@ -267,3 +275,17 @@ Aplikasi ini mendukung login melalui Google dan GitHub. Untuk mengaktifkannya, i
 2.  **Otorisasi Domain Anda**:
     *   Di Firebase Console, navigasi ke **Build > Authentication > Settings**.
     *   Di bawah tab **"Authorized domains"**, tambahkan domain tempat aplikasi Anda di-host.
+
+---
+
+## Konfigurasi Saweria Webhook
+
+Untuk mengaktifkan fitur leaderboard donasi otomatis:
+
+1.  Login ke akun [Saweria](https://saweria.co/) Anda.
+2.  Masuk ke menu **Integrasi** (Integration) > **Webhook**.
+3.  Masukkan URL Webhook aplikasi Anda: `https://DOMAIN_ANDA.com/api/webhooks/saweria`.
+    *   Jika menggunakan local environment, gunakan tool seperti Ngrok untuk mengekspos localhost.
+4.  Centang event yang ingin dikirim (biasanya "Donation").
+5.  Simpan.
+6.  Setiap kali ada donasi masuk, Saweria akan mengirim data ke server, dan leaderboard di `/support` akan otomatis terupdate.

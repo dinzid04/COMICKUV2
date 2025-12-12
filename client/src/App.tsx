@@ -26,6 +26,7 @@ import GenreDetailPage from "@/pages/genre-detail";
 import AuthPage from "@/pages/auth";
 import HistoryPage from "@/pages/history";
 import ProfilePage from "@/pages/profile";
+import SupportPage from "@/pages/support";
 import AdminPage from "@/pages/admin";
 import LeaderboardPage from "@/pages/leaderboard";
 import RoomChat from "@/pages/RoomChat";
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/register" component={AuthPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/user/:uid" component={ProfilePage} />
+      <Route path="/support" component={SupportPage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/room-chat" component={RoomChat} />
       <Route path="/messages" component={PrivateChat} />
@@ -129,12 +131,8 @@ function AppLayout() {
     }
   }, []);
 
-  // Check Daily Streak when user is verified and logged in
-  useEffect(() => {
-    if (isVerified && user) {
-        checkDailyStreak(user);
-    }
-  }, [isVerified, user]);
+  // Check Daily Streak moved to Support Page (manual claim) as requested
+  // "nanti bisa cek check in harian atau streak nya jadi bisa claim manual"
 
   const handleVerification = () => {
     sessionStorage.setItem("turnstile_verified", "true");

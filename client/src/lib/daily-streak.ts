@@ -5,40 +5,36 @@ import { toast } from "@/hooks/use-toast";
 import { isSameDay, isYesterday } from "date-fns";
 
 export const checkDailyStreak = async (user: User) => {
-  if (!user) return;
+  if (!user) return { success: false, message: "User not logged in" };
 
   const userRef = doc(db, "users", user.uid);
 
   try {
     const userDoc = await getDoc(userRef);
-    if (!userDoc.exists()) return;
+    if (!userDoc.exists()) return { success: false, message: "User profile not found" };
 
     const userData = userDoc.data();
     const lastLogin = userData.lastLoginDate ? userData.lastLoginDate.toDate() : null;
     const now = new Date();
 
-    // If no last login, or last login was yesterday, update streak
-    // If last login was today, do nothing
-
     let newStreak = userData.streak || 0;
     let xpBonus = 0;
 
     if (!lastLogin) {
-      // First time login logic if needed, but usually we start at 1
       newStreak = 1;
-      xpBonus = 10;
+      xpBonus = 150; // Day 1 Reward (requested)
     } else if (isSameDay(lastLogin, now)) {
-      // Already logged in today
-      return;
+      return { success: false, message: "Already checked in today" };
     } else if (isYesterday(lastLogin)) {
-      // Login was yesterday, increment streak
       newStreak += 1;
-      // Bonus logic: 10 XP per day, max 100 bonus
-      xpBonus = Math.min(newStreak * 10, 100);
+      // Rewards based on day
+      // 1: 150, 2: 250, 3: 350, 4: 450, 5: 550, 6: 700, 7: 1000
+      const rewards = [150, 250, 350, 450, 550, 700, 1000];
+      const dayIndex = (newStreak - 1) % 7;
+      xpBonus = rewards[dayIndex];
     } else {
-      // Streak broken
       newStreak = 1;
-      xpBonus = 10;
+      xpBonus = 150; // Reset to Day 1
     }
 
     await updateDoc(userRef, {
@@ -47,12 +43,10 @@ export const checkDailyStreak = async (user: User) => {
       xp: increment(xpBonus)
     });
 
-    toast({
-      title: "Daily Login!",
-      description: `Streak: ${newStreak} Days! You earned ${xpBonus} XP.`,
-    });
+    return { success: true, newStreak, xpBonus };
 
   } catch (error) {
     console.error("Error checking streak:", error);
+    return { success: false, error };
   }
 };
