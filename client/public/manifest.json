@@ -1,0 +1,21 @@
+{
+  "name": "COMICKU - Baca Komik Gratis",
+  "short_name": "COMICKU",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "description": "Baca komik online gratis, lengkap, dan update setiap hari.",
+  "icons": [
+    {
+      "src": "/images/header-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/header-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
