@@ -46,7 +46,13 @@ export default function ChapterReader() {
 
   // Scroll to top when chapter changes and save history
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Restore scroll position logic
+    const savedScrollPos = localStorage.getItem(`scroll_pos_${chapterId}`);
+    if (savedScrollPos) {
+      window.scrollTo(0, parseInt(savedScrollPos));
+    } else {
+      window.scrollTo(0, 0);
+    }
 
     if (user && manhwaState && data?.title) {
       const saveHistory = async () => {
@@ -95,7 +101,20 @@ export default function ChapterReader() {
       saveHistory();
       incrementChaptersRead();
     }
+
+    // Save scroll position on unmount
+    return () => {
+       localStorage.setItem(`scroll_pos_${chapterId}`, window.scrollY.toString());
+    };
   }, [chapterId, user, data, manhwaState]);
+
+  // Periodic scroll save (in case of crash/tab close)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      localStorage.setItem(`scroll_pos_${chapterId}`, window.scrollY.toString());
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [chapterId]);
 
   const handleImageError = (index: number) => {
     setImageLoadErrors(prev => new Set(prev).add(index));

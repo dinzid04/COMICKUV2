@@ -8,6 +8,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BottomNavbar } from "@/components/bottom-navbar";
 import { FloatingNotification } from "@/components/floating-notification";
+import DonationWidget from "@/components/donation-widget";
 import SecurityCheck from "@/components/security-check";
 import { useState, useEffect } from "react";
 import { doc, setDoc, increment, updateDoc, getDoc } from "firebase/firestore";
@@ -61,6 +62,8 @@ function Router() {
 
 import { AuthProvider } from "@/hooks/use-auth";
 import { usePresence } from "@/hooks/use-presence";
+import { useAuth } from "@/hooks/use-auth";
+import { checkDailyStreak } from "@/lib/daily-streak";
 
 function App() {
   // Track visits once per session/mount
@@ -116,6 +119,7 @@ function AppLayout() {
   const [isChatPage] = useRoute("/room-chat");
   const [isPrivateChat] = useRoute("/messages");
   const [isVerified, setIsVerified] = useState(false);
+  const { user } = useAuth();
 
   // Check session storage on mount
   useEffect(() => {
@@ -124,6 +128,13 @@ function AppLayout() {
       setIsVerified(true);
     }
   }, []);
+
+  // Check Daily Streak when user is verified and logged in
+  useEffect(() => {
+    if (isVerified && user) {
+        checkDailyStreak(user);
+    }
+  }, [isVerified, user]);
 
   const handleVerification = () => {
     sessionStorage.setItem("turnstile_verified", "true");
@@ -155,6 +166,7 @@ function AppLayout() {
       {showFooter && <Footer />}
       {showFooter && <BottomNavbar />}
       <FloatingNotification />
+      <DonationWidget />
     </div>
   );
 }
