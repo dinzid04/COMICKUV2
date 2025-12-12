@@ -290,22 +290,39 @@ const DirectDonationDialog = ({ user }: { user: any }) => {
                     Donate Direct (QRIS) <DollarSign className="ml-2 h-4 w-4" />
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>Donate via QRIS</DialogTitle>
                     <DialogDescription>Scan the QR code with any e-wallet (GoPay, OVO, Dana, etc).</DialogDescription>
                 </DialogHeader>
 
                 {step === 'input' && (
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Amount (Rp)</Label>
-                            <Input
-                                type="number"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                min={1000}
-                            />
+                    <div className="space-y-6 py-4">
+                        <div className="space-y-3">
+                            <Label>Select Amount</Label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {[1000, 2000, 3000, 5000].map((val) => (
+                                    <Button
+                                        key={val}
+                                        variant={parseInt(amount) === val ? "default" : "outline"}
+                                        onClick={() => setAmount(val.toString())}
+                                        className={parseInt(amount) === val ? "bg-yellow-500 hover:bg-yellow-600 text-black border-transparent" : ""}
+                                    >
+                                        {val / 1000}k
+                                    </Button>
+                                ))}
+                            </div>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                                <Input
+                                    type="number"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    min={1000}
+                                    className="pl-9"
+                                    placeholder="Custom amount"
+                                />
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <Label>Message</Label>
@@ -313,10 +330,15 @@ const DirectDonationDialog = ({ user }: { user: any }) => {
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
                                 maxLength={200}
+                                placeholder="Your message..."
                             />
                         </div>
-                        <Button className="w-full" onClick={handleGenerate} disabled={loading || !user}>
-                            {loading ? "Generating..." : "Generate QR Code"}
+                        <Button
+                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
+                            onClick={handleGenerate}
+                            disabled={loading || !user || parseInt(amount) < 1000}
+                        >
+                            {loading ? "Generating..." : "Continue to Pay"}
                         </Button>
                         {!user && <p className="text-red-500 text-xs text-center">Please login to donate</p>}
                     </div>
