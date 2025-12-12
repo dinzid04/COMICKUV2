@@ -10,6 +10,8 @@ import { BottomNavbar } from "@/components/bottom-navbar";
 import { FloatingNotification } from "@/components/floating-notification";
 import SecurityCheck from "@/components/security-check";
 import { useState, useEffect } from "react";
+import { doc, setDoc, increment, updateDoc, getDoc } from "firebase/firestore";
+import { db } from "@/firebaseConfig";
 
 // Pages
 import Home from "@/pages/home";
@@ -61,6 +63,40 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { usePresence } from "@/hooks/use-presence";
 
 function App() {
+  // Track visits once per session/mount
+  useEffect(() => {
+    const trackVisit = async () => {
+      // Check session storage to avoid double counting on reload (optional, but requested "activity user yang buka web")
+      // Usually "visits" implies session starts.
+      const hasVisited = sessionStorage.getItem("visit_tracked");
+      if (!hasVisited) {
+        try {
+          const statsRef = doc(db, "site_stats", "general");
+          // Use updateDoc if exists, setDoc with merge if potentially new
+          // Simpler: Try update, catch if fail (doc missing), then set.
+          // Or just set with merge: true (though increment needs special handling on init)
+
+          // Best safe approach: getDoc first
+          const docSnap = await getDoc(statsRef);
+
+          if (docSnap.exists()) {
+             await updateDoc(statsRef, {
+                visits: increment(1)
+             });
+          } else {
+             await setDoc(statsRef, {
+                visits: 1
+             });
+          }
+          sessionStorage.setItem("visit_tracked", "true");
+        } catch (error) {
+           console.error("Failed to track visit:", error);
+        }
+      }
+    };
+    trackVisit();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system" storageKey="manhwaku-theme">

@@ -152,6 +152,15 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Aturan untuk Site Stats (Counter Visits)
+    match /site_stats/{docId} {
+       allow read: if true; // Admin needs to read, public might not need but harmless for stats
+       // Allow incrementing visits by anyone (anonymous included)
+       allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visits'])
+                     && request.resource.data.visits == resource.data.visits + 1;
+       allow create: if true; // Allow creation if doesn't exist (first run)
+    }
+
     // Aturan untuk Private Chat
     match /private_chats/{chatId} {
       // Pengguna bisa membuat chat baru jika mereka termasuk dalam partisipan

@@ -24,7 +24,7 @@ const SecurityCheck: React.FC<SecurityCheckProps> = ({ onVerify }) => {
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center pb-8">
           <Turnstile
-            siteKey="0x4AAAAAACFfejFFljemif4u" // Using the same site key as seen in auth.tsx (or standard test key)
+            siteKey="0x4AAAAAACFfejFFljemif4u"
             onSuccess={onVerify}
             options={{
               theme: 'auto',

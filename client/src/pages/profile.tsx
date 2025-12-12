@@ -17,7 +17,7 @@ import { doc, setDoc, getDoc, collection, getDocs, query, where, addDoc, serverT
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, Github, Instagram, Music } from 'lucide-react';
 import VerificationBadge from '@/components/ui/verification-badge';
-import { User } from '@shared/types'; // Corrected import path
+import { User } from '@shared/types';
 
 const profileSchema = z.object({
   nickname: z.string().min(3, 'Nickname must be at least 3 characters').max(20, 'Nickname must be at most 20 characters'),
@@ -42,6 +42,40 @@ const  cleanObject = (obj: any) => {
     }
   }
   return newObj;
+};
+
+// Helper function to crop image to square (1:1)
+const cropToSquare = (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+
+      const size = Math.min(img.width, img.height);
+      canvas.width = size;
+      canvas.height = size;
+
+      const sx = (img.width - size) / 2;
+      const sy = (img.height - size) / 2;
+
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Canvas to Blob failed'));
+        }
+      }, file.type);
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = URL.createObjectURL(file);
+  });
 };
 
 const ProfilePage: React.FC = () => {
@@ -147,8 +181,22 @@ const ProfilePage: React.FC = () => {
   const handleImageUpload = async (file: File, type: 'photo' | 'banner') => {
     if (!user || !currentUserProfile) return;
 
+    let fileToUpload = file;
+
+    // Automatic 1:1 crop for profile photos
+    if (type === 'photo') {
+      try {
+        const croppedBlob = await cropToSquare(file);
+        fileToUpload = new File([croppedBlob], file.name, { type: file.type });
+        toast({ title: 'Cropped', description: 'Image automatically cropped to square.' });
+      } catch (error) {
+        console.error("Cropping failed, using original", error);
+        // Fallback to original
+      }
+    }
+
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', fileToUpload);
 
     try {
       const response = await fetch('https://swagger-nextjs-one.vercel.app/api/cdn/dinzid', {
@@ -189,21 +237,11 @@ const ProfilePage: React.FC = () => {
   const handleSendMessage = async () => {
       if (!user || !displayProfile) return;
 
-      // Navigate to messages
-      // Ideally, we should initialize the chat here, but PrivateChat component handles creation on load if it knows who to talk to.
-      // Since PrivateChat uses a list selection model, we might need to pass state or create the chat document first.
-
-      // Let's pre-create the chat doc here to ensure it exists, then navigate
       try {
           const participants = [user.uid, displayProfile.uid].sort();
           const chatId = participants.join('_');
           const chatRef = doc(db, 'private_chats', chatId);
 
-          // We can just navigate to messages?
-          // The current PrivateChat implementation doesn't support opening a specific chat via URL.
-          // It relies on clicking the user in the list.
-
-          // However, we can create the chat document so it appears in the list.
           await setDoc(chatRef, {
             participants: participants,
             createdAt: serverTimestamp(),
@@ -275,7 +313,6 @@ const ProfilePage: React.FC = () => {
               <h1 className="text-3xl font-bold">{displayProfile.nickname || 'User'}</h1>
               <VerificationBadge verification={displayProfile.verification} />
             </div>
-            {/* We might not want to show email for other users for privacy */}
             {isOwnProfile && <p className="text-muted-foreground">{user?.email}</p>}
           </div>
 
