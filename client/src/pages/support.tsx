@@ -8,6 +8,10 @@ import { doc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot } f
 import { db } from '@/firebaseConfig';
 import { Trophy, CheckCircle, Calendar, DollarSign, ExternalLink } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import QRCode from "react-qr-code";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Donation {
   id: string;
@@ -151,9 +155,21 @@ const SupportPage: React.FC = () => {
                     You can donate via Saweria (GoPay, OVO, Dana, LinkAja, QRIS).
                     Your name will automatically appear on the leaderboard below.
                 </p>
-                <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold" asChild>
-                    <a href="https://saweria.co/YOUR_USERNAME" target="_blank" rel="noopener noreferrer">
-                        Donate via Saweria <ExternalLink className="ml-2 h-4 w-4" />
+
+                <DirectDonationDialog user={user} />
+
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or</span>
+                    </div>
+                </div>
+
+                <Button variant="outline" className="w-full" asChild>
+                    <a href="https://saweria.co/gadingkencana" target="_blank" rel="noopener noreferrer">
+                        Open Saweria Page <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
                 </Button>
              </CardContent>
@@ -207,6 +223,131 @@ const SupportPage: React.FC = () => {
       </div>
     </div>
   );
+};
+
+const DirectDonationDialog = ({ user }: { user: any }) => {
+    const [amount, setAmount] = useState("5000");
+    const [message, setMessage] = useState("Support Comicku");
+    const [qrString, setQrString] = useState("");
+    const [transactionId, setTransactionId] = useState("");
+    const [step, setStep] = useState<'input' | 'payment' | 'success'>('input');
+    const [loading, setLoading] = useState(false);
+
+    // Poll for status
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (step === 'payment' && transactionId) {
+            interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/saweria/status/${transactionId}`);
+                    const data = await res.json();
+                    if (data.paid) {
+                        setStep('success');
+                        clearInterval(interval);
+                    }
+                } catch (e) {
+                    console.error("Polling error", e);
+                }
+            }, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [step, transactionId]);
+
+    const handleGenerate = async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const res = await fetch("/api/saweria/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    amount: parseInt(amount),
+                    sender: user.displayName || user.nickname || "Anonymous",
+                    email: user.email,
+                    message: message
+                })
+            });
+            const data = await res.json();
+
+            if (data.qr_string) {
+                setQrString(data.qr_string);
+                setTransactionId(data.id);
+                setStep('payment');
+            } else {
+                alert("Failed to generate QR: " + data.error);
+            }
+        } catch (e) {
+            alert("Error generating QR");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+                    Donate Direct (QRIS) <DollarSign className="ml-2 h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Donate via QRIS</DialogTitle>
+                    <DialogDescription>Scan the QR code with any e-wallet (GoPay, OVO, Dana, etc).</DialogDescription>
+                </DialogHeader>
+
+                {step === 'input' && (
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Amount (Rp)</Label>
+                            <Input
+                                type="number"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                min={1000}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Message</Label>
+                            <Input
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                maxLength={200}
+                            />
+                        </div>
+                        <Button className="w-full" onClick={handleGenerate} disabled={loading || !user}>
+                            {loading ? "Generating..." : "Generate QR Code"}
+                        </Button>
+                        {!user && <p className="text-red-500 text-xs text-center">Please login to donate</p>}
+                    </div>
+                )}
+
+                {step === 'payment' && (
+                    <div className="flex flex-col items-center justify-center space-y-4 py-4">
+                        <div className="p-4 bg-white rounded-lg">
+                            <QRCode value={qrString} size={200} />
+                        </div>
+                        <p className="text-sm text-center text-muted-foreground">
+                            Waiting for payment... <br/>
+                            <span className="animate-pulse font-bold text-yellow-600">Checking status</span>
+                        </p>
+                        <p className="text-xs text-center text-muted-foreground">
+                            ID: {transactionId}
+                        </p>
+                    </div>
+                )}
+
+                {step === 'success' && (
+                    <div className="flex flex-col items-center justify-center space-y-4 py-8">
+                        <CheckCircle className="h-16 w-16 text-green-500" />
+                        <h3 className="text-xl font-bold">Thank You!</h3>
+                        <p className="text-center">Your donation has been received.</p>
+                        <Button onClick={() => setStep('input')} variant="outline">Donate Again</Button>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
 };
 
 export default SupportPage;
