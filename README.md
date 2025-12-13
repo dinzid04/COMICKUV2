@@ -94,12 +94,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Aturan untuk konfigurasi settings (Notifikasi Mengambang)
+    // Aturan untuk konfigurasi settings (Notifikasi Mengambang & Gamification)
     match /settings/{document=**} {
       // Siapa saja bisa membaca konfigurasi (untuk menampilkan notifikasi)
       allow read: if true;
       // Hanya admin yang bisa mengubah pengaturan
-      // Pastikan UID Admin sudah ada di koleksi 'admins'
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Aturan untuk Locked Chapters (Override Content)
+    match /locked_chapters/{chapterId} {
+      // Siapa saja bisa membaca status lock (untuk UI)
+      allow read: if true;
+      // Hanya admin yang bisa mengatur lock
       allow write: if request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 

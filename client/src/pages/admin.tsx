@@ -5,7 +5,9 @@ import UserManagement from '@/components/admin/user-management';
 import NotificationManagement from '@/components/admin/notification-management';
 import ChatManagement from '@/components/admin/chat-management';
 import SiteStats from '@/components/admin/site-stats';
-import { Users, Quote, Bell, MessageSquare, LayoutDashboard, BarChart3 } from 'lucide-react';
+import GamificationSettings from '@/components/admin/gamification-settings';
+import ChapterLockManagement from '@/components/admin/chapter-lock-management';
+import { Users, Quote, Bell, MessageSquare, LayoutDashboard, BarChart3, Trophy, Lock } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const AdminPage: React.FC = () => {
@@ -82,6 +84,24 @@ const AdminPage: React.FC = () => {
                       <span className="hidden md:inline">Activity Stats</span>
                       <span className="md:hidden">Stats</span>
                     </TabsTrigger>
+
+                    <TabsTrigger
+                      value="gamification"
+                      className="w-full justify-start gap-3 px-3 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg transition-all border border-transparent hover:bg-muted/50"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      <span className="hidden md:inline">Gamification</span>
+                      <span className="md:hidden">Rewards</span>
+                    </TabsTrigger>
+
+                    <TabsTrigger
+                      value="chapters"
+                      className="w-full justify-start gap-3 px-3 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg transition-all border border-transparent hover:bg-muted/50"
+                    >
+                      <Lock className="h-4 w-4" />
+                      <span className="hidden md:inline">Chapter Locks</span>
+                      <span className="md:hidden">Locks</span>
+                    </TabsTrigger>
                   </TabsList>
 
                   {/* Quick Stats Summary or Info could go here in the sidebar */}
@@ -147,6 +167,24 @@ const AdminPage: React.FC = () => {
                       <h2 className="text-2xl font-bold tracking-tight">Site Activity</h2>
                     </div>
                     <SiteStats />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="gamification" className="m-0 focus-visible:outline-none focus-visible:ring-0">
+                  <div className="flex flex-col gap-6">
+                     <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold tracking-tight">Gamification Settings</h2>
+                    </div>
+                    <GamificationSettings />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="chapters" className="m-0 focus-visible:outline-none focus-visible:ring-0">
+                  <div className="flex flex-col gap-6">
+                     <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold tracking-tight">Chapter Locks</h2>
+                    </div>
+                    <ChapterLockManagement />
                   </div>
                 </TabsContent>
               </div>

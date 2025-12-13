@@ -8,7 +8,6 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { BottomNavbar } from "@/components/bottom-navbar";
 import { FloatingNotification } from "@/components/floating-notification";
-import DonationWidget from "@/components/donation-widget";
 import SecurityCheck from "@/components/security-check";
 import { useState, useEffect } from "react";
 import { doc, setDoc, increment, updateDoc, getDoc } from "firebase/firestore";
@@ -164,7 +163,6 @@ function AppLayout() {
       {showFooter && <Footer />}
       {showFooter && <BottomNavbar />}
       <FloatingNotification />
-      <DonationWidget />
     </div>
   );
 }

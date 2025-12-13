@@ -50,3 +50,59 @@ export const checkDailyStreak = async (user: User) => {
     return { success: false, error };
   }
 };
+
+export const updateStreakWithConfig = async (user: User) => {
+  if (!user) return { success: false, message: "User not logged in" };
+
+  const userRef = doc(db, "users", user.uid);
+  const configRef = doc(db, "settings", "gamification");
+
+  try {
+    const [userDoc, configDoc] = await Promise.all([
+      getDoc(userRef),
+      getDoc(configRef)
+    ]);
+
+    if (!userDoc.exists()) return { success: false, message: "User profile not found" };
+
+    const userData = userDoc.data();
+    const configData = configDoc.exists() ? configDoc.data() : { rewardType: 'xp', rewardAmount: 50 };
+
+    const rewardType = configData.rewardType || 'xp';
+    const rewardAmount = configData.rewardAmount || 50;
+
+    const lastLogin = userData.lastLoginDate ? userData.lastLoginDate.toDate() : null;
+    const now = new Date();
+
+    let newStreak = userData.streak || 0;
+
+    if (lastLogin && isSameDay(lastLogin, now)) {
+       return { success: false, message: "Already checked in today" };
+    }
+
+    if (lastLogin && isYesterday(lastLogin)) {
+      newStreak += 1;
+    } else {
+      newStreak = 1; // Reset or First time
+    }
+
+    const updates: any = {
+      lastLoginDate: serverTimestamp(),
+      streak: newStreak
+    };
+
+    if (rewardType === 'coin') {
+      updates.coins = increment(rewardAmount);
+    } else {
+      updates.xp = increment(rewardAmount);
+    }
+
+    await updateDoc(userRef, updates);
+
+    return { success: true, newStreak, rewardType, rewardAmount };
+
+  } catch (error) {
+    console.error("Error updating streak with config:", error);
+    return { success: false, error };
+  }
+};

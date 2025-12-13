@@ -3,10 +3,10 @@ import { SEO } from '@/components/seo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
-import { checkDailyStreak } from '@/lib/daily-streak';
+import { checkDailyStreak, updateStreakWithConfig } from '@/lib/daily-streak';
 import { doc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
-import { Trophy, CheckCircle, Calendar, DollarSign, ExternalLink } from 'lucide-react';
+import { Trophy, CheckCircle, Calendar, DollarSign, ExternalLink, Coins } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "react-qr-code";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,8 @@ interface Donation {
   created_at: any;
 }
 
-const REWARDS = [150, 250, 350, 450, 550, 700, 1000]; // 7 Days
+// Default Rewards if not configured, or placeholders
+const DEFAULT_REWARDS = [150, 250, 350, 450, 550, 700, 1000]; // 7 Days
 
 const SupportPage: React.FC = () => {
   const { user } = useAuth();
@@ -30,9 +31,24 @@ const SupportPage: React.FC = () => {
   const [claimedToday, setClaimedToday] = useState(false);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [rewardConfig, setRewardConfig] = useState<{rewardType: 'xp'|'coin', rewardAmount: number}>({ rewardType: 'xp', rewardAmount: 50 });
 
-  // Fetch Streak Info
+  // Fetch Streak Info & Reward Config
   useEffect(() => {
+    // Fetch Reward Config
+    const fetchConfig = async () => {
+        try {
+            const configRef = doc(db, "settings", "gamification");
+            const configSnap = await getDoc(configRef);
+            if (configSnap.exists()) {
+                setRewardConfig(configSnap.data() as any);
+            }
+        } catch (e) {
+            console.error("Failed to load reward config", e);
+        }
+    };
+    fetchConfig();
+
     if (!user) return;
     const fetchUserData = async () => {
       const userRef = doc(db, 'users', user.uid);
@@ -71,17 +87,19 @@ const SupportPage: React.FC = () => {
     }
     setLoading(true);
     try {
-        const result = await checkDailyStreak(user);
+        // Use the new update function that reads config
+        const result = await updateStreakWithConfig(user);
         if (result.success) {
             setStreak(result.newStreak);
             setClaimedToday(true);
-            toast({ title: "Check-in Successful!", description: `You earned ${result.xpBonus} XP!` });
+            const rewardText = result.rewardType === 'coin' ? 'Coins' : 'XP';
+            toast({ title: "Check-in Successful!", description: `You earned ${result.rewardAmount} ${rewardText}!` });
         } else {
             toast({ title: "Already Checked In", description: "Come back tomorrow!" });
         }
     } catch (e) {
         console.error(e);
-        toast({ title: "Error", variant: "destructive" });
+        toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
     } finally {
         setLoading(false);
     }
@@ -105,11 +123,17 @@ const SupportPage: React.FC = () => {
             </CardHeader>
             <CardContent>
                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
-                 {REWARDS.map((reward, index) => {
+                 {DEFAULT_REWARDS.map((_, index) => {
                     const day = index + 1;
-                    const isCompleted = streak >= day; // Simple logic, ideally based on current cycle
-                    // Complex cycle logic: (streak % 7) == day_index... simplification for UI
+                    const isCompleted = streak >= day; // Simple visualization
                     const isActive = (streak % 7) === index;
+
+                    // Display the configured reward instead of hardcoded REWARDS array
+                    // For visualization, we just show the configured amount * 1 (or multiplier if we had one)
+                    // For now, simpler is better: Show the current global daily reward
+
+                    const amount = rewardConfig.rewardAmount;
+                    const type = rewardConfig.rewardType === 'coin' ? 'Coin' : 'XP';
 
                     return (
                         <div key={index} className={`
@@ -118,8 +142,11 @@ const SupportPage: React.FC = () => {
                             ${isCompleted && !isActive ? 'opacity-50' : ''}
                         `}>
                             <span className="text-xs font-bold text-muted-foreground">Day {day}</span>
-                            <span className="text-lg font-bold text-primary">+{reward}</span>
-                            <span className="text-[10px] text-muted-foreground">XP</span>
+                            <span className="text-lg font-bold text-primary flex items-center gap-1">
+                                +{amount}
+                                {rewardConfig.rewardType === 'coin' && <Coins className="h-3 w-3" />}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground uppercase">{type}</span>
                         </div>
                     );
                  })}

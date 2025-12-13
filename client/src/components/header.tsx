@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon, MessageSquare } from "lucide-react";
+import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon, MessageSquare, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -136,6 +136,12 @@ export function Header() {
                 )}
               </Button>
             </Link>
+            {user && (
+               <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-full border border-yellow-500/20">
+                  <Coins className="h-4 w-4 fill-current" />
+                  <span className="font-bold text-sm">{userProfile?.coins || 0}</span>
+               </div>
+            )}
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -281,6 +287,13 @@ export function Header() {
               </Link>
               {user ? (
                 <>
+                  <div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg mb-2">
+                    <span className="text-sm font-medium">Coins</span>
+                    <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                      <Coins className="h-4 w-4 fill-current" />
+                      <span className="font-bold">{userProfile?.coins || 0}</span>
+                    </div>
+                  </div>
                   <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
                     <UserIcon className="mr-2 h-5 w-5" /> Profil
                   </Link>
