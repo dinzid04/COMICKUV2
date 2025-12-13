@@ -260,6 +260,9 @@ export function Header() {
               </Link>
               {user ? (
                 <>
+                  <Link href="/support" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2 text-pink-500">
+                    <Gift className="mr-2 h-5 w-5" /> Daily Rewards
+                  </Link>
                   <div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg mb-2">
                     <span className="text-sm font-medium">Coins</span>
                     <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">

@@ -335,9 +335,9 @@ export default function ManhwaDetail() {
       {/* Chapter List */}
       <div className="container mx-auto max-w-7xl px-4 py-12">
         <h2 className="font-display text-2xl font-bold mb-6">Daftar Chapter</h2>
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div>
           {data.chapters && data.chapters.length > 0 ? (
-            <div className="divide-y divide-border">
+            <div className="flex flex-col gap-3">
               {data.chapters.map((chapter) => {
                 const chapterId = extractChapterId(chapter.slug);
                 const isLockedInfo = lockedChapters[chapterId];
@@ -349,37 +349,40 @@ export default function ManhwaDetail() {
                   key={chapter.slug}
                   onClick={() => handleChapterClick(chapter.slug, isLocked, isUnlocked, isLockedInfo?.price || 0, chapter.title)}
                   className={`
-                    flex items-center justify-between p-4 transition-all cursor-pointer border-b last:border-0
-                    ${isLocked && !isUnlocked ? 'bg-muted/30 hover:bg-muted/50' : 'hover-elevate active-elevate-2'}
+                    relative flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer group
+                    ${isLocked && !isUnlocked
+                        ? 'bg-muted/10 border-muted/20 opacity-90 hover:bg-muted/20'
+                        : 'bg-card/50 border-border/50 hover:bg-accent hover:border-accent hover:shadow-sm'
+                    }
                   `}
                   data-testid={`link-chapter-${chapter.slug}`}
                 >
                   <div>
-                    <h3 className={`font-semibold flex items-center gap-2 ${isLocked && !isUnlocked ? 'text-muted-foreground' : ''}`}>
+                    <h3 className={`text-base font-medium flex items-center gap-2 transition-colors ${isLocked && !isUnlocked ? 'text-muted-foreground' : 'group-hover:text-primary'}`}>
                       {chapter.title}
                       {isLocked && !isUnlocked && (
-                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/20 border-yellow-500/20">
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/20 border-yellow-500/20 text-xs px-2 py-0.5 h-auto">
                             <Coins className="w-3 h-3 mr-1" /> {isLockedInfo.price}
                           </Badge>
                       )}
                       {isLocked && isUnlocked && (
-                           <Badge variant="outline" className="text-green-500 border-green-500/50">
+                           <Badge variant="outline" className="text-green-500 border-green-500/50 text-xs px-2 py-0.5 h-auto">
                                <Check className="w-3 h-3 mr-1" /> Unlocked
                            </Badge>
                       )}
                     </h3>
-                    <p className="text-sm text-muted-foreground">{chapter.date}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{chapter.date}</p>
                   </div>
                   {isLocked && !isUnlocked ? (
-                      <Lock className="h-5 w-5 text-yellow-500/70" />
+                      <Lock className="h-5 w-5 text-muted-foreground/50" />
                   ) : (
-                      <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                      <ExternalLink className="h-5 w-5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
                   )}
                 </div>
               )})}
             </div>
           ) : (
-            <div className="p-8 text-center text-muted-foreground">
+            <div className="p-8 text-center text-muted-foreground bg-card border border-border rounded-lg">
               Tidak ada chapter tersedia
             </div>
           )}
