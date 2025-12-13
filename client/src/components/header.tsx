@@ -126,16 +126,6 @@ export function Header() {
                 Genre
               </Button>
             </Link>
-            <Link href="/messages" data-testid="link-messages" className="relative">
-              <Button variant="ghost" className="hover-elevate active-elevate-2">
-                Pesan
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 -mt-1 -mr-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center pointer-events-none">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </Button>
-            </Link>
             {user && (
                <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-full border border-yellow-500/20">
                   <Coins className="h-4 w-4 fill-current" />
@@ -160,19 +150,7 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>Profil</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/favorites')}>
-                    <Heart className="mr-2 h-4 w-4" />
-                    <span>Favorit</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/history')}>
-                    <History className="mr-2 h-4 w-4" />
-                    <span>Riwayat</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {/* Items removed as per user request (Mobile First / BottomNavbar relies) */}
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Keluar</span>
@@ -273,18 +251,6 @@ export function Header() {
               <Link href="/genres" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
                 <BookOpen className="mr-2 h-5 w-5" /> Genre
               </Link>
-              <Link href="/messages" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
-                <div className="relative">
-                   <MessageSquare className="mr-2 h-5 w-5" />
-                   {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border border-background"></span>
-                   )}
-                </div>
-                Pesan
-                {unreadCount > 0 && (
-                    <span className="ml-auto text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">{unreadCount}</span>
-                )}
-              </Link>
               {user ? (
                 <>
                   <div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg mb-2">
@@ -294,15 +260,6 @@ export function Header() {
                       <span className="font-bold">{userProfile?.coins || 0}</span>
                     </div>
                   </div>
-                  <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
-                    <UserIcon className="mr-2 h-5 w-5" /> Profil
-                  </Link>
-                  <Link href="/favorites" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
-                    <Heart className="mr-2 h-5 w-5" /> Favorit
-                  </Link>
-                  <Link href="/history" onClick={() => setMobileMenuOpen(false)} className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2 w-full hover-elevate active-elevate-2">
-                    <History className="mr-2 h-5 w-5" /> Riwayat
-                  </Link>
                 </>
               ) : null}
               <Button

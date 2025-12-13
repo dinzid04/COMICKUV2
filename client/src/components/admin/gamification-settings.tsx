@@ -9,17 +9,22 @@ import { db } from "@/firebaseConfig";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
 
-interface GamificationSettings {
-  rewardType: 'xp' | 'coin';
-  rewardAmount: number;
+interface DayReward {
+  type: 'xp' | 'coin';
+  amount: number;
 }
+
+interface GamificationSettings {
+  days: DayReward[];
+}
+
+const DEFAULT_DAYS: DayReward[] = Array(7).fill({ type: 'xp', amount: 50 });
 
 const GamificationSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<GamificationSettings>({
-    rewardType: 'xp',
-    rewardAmount: 50
+    days: DEFAULT_DAYS
   });
   const { toast } = useToast();
 
@@ -30,13 +35,25 @@ const GamificationSettings: React.FC = () => {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setSettings(docSnap.data() as GamificationSettings);
+          const data = docSnap.data();
+          // Handle migration from old single-value format to array
+          if (data.days) {
+             setSettings(data as GamificationSettings);
+          } else {
+             // Migrate old format (rewardType/rewardAmount) to all days or just reset
+             // Let's just reset to default for cleanliness or map old val to all days
+             const oldType = data.rewardType || 'xp';
+             const oldAmount = data.rewardAmount || 50;
+             setSettings({
+                 days: Array(7).fill({ type: oldType, amount: oldAmount })
+             });
+          }
         } else {
           // Initialize default if not exists
           await setDoc(docRef, {
-            rewardType: 'xp',
-            rewardAmount: 50
+            days: DEFAULT_DAYS
           });
+          setSettings({ days: DEFAULT_DAYS });
         }
       } catch (error) {
         console.error("Error fetching gamification settings:", error);
@@ -82,50 +99,58 @@ const GamificationSettings: React.FC = () => {
     );
   }
 
+  const updateDay = (index: number, field: keyof DayReward, value: any) => {
+      const newDays = [...settings.days];
+      newDays[index] = { ...newDays[index], [field]: value };
+      setSettings({ days: newDays });
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Daily Streak Rewards</CardTitle>
+        <CardTitle>Daily Streak Rewards (7 Days Cycle)</CardTitle>
         <CardDescription>
-          Configure the reward type and amount for daily check-ins.
+          Configure the reward type and amount for each day of the streak.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Reward Type</Label>
-            <RadioGroup
-              value={settings.rewardType}
-              onValueChange={(value) => setSettings({ ...settings, rewardType: value as 'xp' | 'coin' })}
-              className="flex flex-col space-y-1"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="xp" id="xp" />
-                <Label htmlFor="xp">Experience Points (XP)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="coin" id="coin" />
-                <Label htmlFor="coin">Coins</Label>
-              </div>
-            </RadioGroup>
-          </div>
+            {settings.days.map((day, index) => (
+                <div key={index} className="flex items-center gap-4 p-4 border rounded-lg bg-muted/20">
+                    <div className="w-16 font-bold text-sm">Day {index + 1}</div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Reward Amount</Label>
-            <Input
-              id="amount"
-              type="number"
-              min="1"
-              value={settings.rewardAmount}
-              onChange={(e) => setSettings({ ...settings, rewardAmount: parseInt(e.target.value) || 0 })}
-            />
-            <p className="text-sm text-muted-foreground">
-              The amount of XP or Coins a user receives for checking in.
-            </p>
-          </div>
+                    <div className="flex-1 space-y-2">
+                        <Label className="text-xs">Type</Label>
+                        <RadioGroup
+                            value={day.type}
+                            onValueChange={(val) => updateDay(index, 'type', val)}
+                            className="flex gap-4"
+                        >
+                             <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="xp" id={`xp-${index}`} />
+                                <Label htmlFor={`xp-${index}`}>XP</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="coin" id={`coin-${index}`} />
+                                <Label htmlFor={`coin-${index}`}>Coin</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+
+                    <div className="w-32 space-y-2">
+                        <Label className="text-xs">Amount</Label>
+                        <Input
+                            type="number"
+                            min="1"
+                            value={day.amount}
+                            onChange={(e) => updateDay(index, 'amount', parseInt(e.target.value) || 0)}
+                        />
+                    </div>
+                </div>
+            ))}
         </div>
 
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving} className="w-full">
           {saving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

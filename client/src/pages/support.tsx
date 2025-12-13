@@ -31,7 +31,9 @@ const SupportPage: React.FC = () => {
   const [claimedToday, setClaimedToday] = useState(false);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [rewardConfig, setRewardConfig] = useState<{rewardType: 'xp'|'coin', rewardAmount: number}>({ rewardType: 'xp', rewardAmount: 50 });
+  const [rewardConfig, setRewardConfig] = useState<{days: {type: 'xp'|'coin', amount: number}[]}>({
+      days: Array(7).fill({ type: 'xp', amount: 50 })
+  });
 
   // Fetch Streak Info & Reward Config
   useEffect(() => {
@@ -41,7 +43,10 @@ const SupportPage: React.FC = () => {
             const configRef = doc(db, "settings", "gamification");
             const configSnap = await getDoc(configRef);
             if (configSnap.exists()) {
-                setRewardConfig(configSnap.data() as any);
+                const data = configSnap.data();
+                if (data.days) {
+                    setRewardConfig(data as any);
+                }
             }
         } catch (e) {
             console.error("Failed to load reward config", e);
@@ -123,17 +128,22 @@ const SupportPage: React.FC = () => {
             </CardHeader>
             <CardContent>
                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
-                 {DEFAULT_REWARDS.map((_, index) => {
+                 {rewardConfig.days.map((config, index) => {
                     const day = index + 1;
-                    const isCompleted = streak >= day; // Simple visualization
+                    // Visualize streak. If streak > 7, we just mod 7 for cycle, but for "Day 1..7" grid,
+                    // we show if streak >= day (for first week) OR if user is in that day of cycle.
+                    // Simplified: Just highlight current day of cycle.
+                    const cycleDay = (streak % 7);
+                    // Note: streak 1 = index 0. streak 0 = no active.
+                    // If streak is 8, it's index 0 again.
+                    // If cycleDay matches index, it's next/current target.
+
+                    const isCompleted = streak > 0 && (streak % 7) > index; // Completed in current cycle
+                    const isCurrent = (streak % 7) === index; // Next to claim
+
+                    // Actually, simpler logic:
+                    // Just show the 7 days plan. Highlight the one that corresponds to (streak % 7).
                     const isActive = (streak % 7) === index;
-
-                    // Display the configured reward instead of hardcoded REWARDS array
-                    // For visualization, we just show the configured amount * 1 (or multiplier if we had one)
-                    // For now, simpler is better: Show the current global daily reward
-
-                    const amount = rewardConfig.rewardAmount;
-                    const type = rewardConfig.rewardType === 'coin' ? 'Coin' : 'XP';
 
                     return (
                         <div key={index} className={`
@@ -143,10 +153,10 @@ const SupportPage: React.FC = () => {
                         `}>
                             <span className="text-xs font-bold text-muted-foreground">Day {day}</span>
                             <span className="text-lg font-bold text-primary flex items-center gap-1">
-                                +{amount}
-                                {rewardConfig.rewardType === 'coin' && <Coins className="h-3 w-3" />}
+                                +{config.amount}
+                                {config.type === 'coin' && <Coins className="h-3 w-3" />}
                             </span>
-                            <span className="text-[10px] text-muted-foreground uppercase">{type}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase">{config.type}</span>
                         </div>
                     );
                  })}

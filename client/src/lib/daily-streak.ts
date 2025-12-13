@@ -66,10 +66,9 @@ export const updateStreakWithConfig = async (user: User) => {
     if (!userDoc.exists()) return { success: false, message: "User profile not found" };
 
     const userData = userDoc.data();
-    const configData = configDoc.exists() ? configDoc.data() : { rewardType: 'xp', rewardAmount: 50 };
+    const configData = configDoc.exists() ? configDoc.data() : {};
 
-    const rewardType = configData.rewardType || 'xp';
-    const rewardAmount = configData.rewardAmount || 50;
+    const daysConfig = configData.days || Array(7).fill({ type: 'xp', amount: 50 });
 
     const lastLogin = userData.lastLoginDate ? userData.lastLoginDate.toDate() : null;
     const now = new Date();
@@ -86,20 +85,25 @@ export const updateStreakWithConfig = async (user: User) => {
       newStreak = 1; // Reset or First time
     }
 
+    // Determine reward based on day index (0-6)
+    // Streak 1 = Index 0
+    const dayIndex = (newStreak - 1) % 7;
+    const todayReward = daysConfig[dayIndex] || { type: 'xp', amount: 50 };
+
     const updates: any = {
       lastLoginDate: serverTimestamp(),
       streak: newStreak
     };
 
-    if (rewardType === 'coin') {
-      updates.coins = increment(rewardAmount);
+    if (todayReward.type === 'coin') {
+      updates.coins = increment(todayReward.amount);
     } else {
-      updates.xp = increment(rewardAmount);
+      updates.xp = increment(todayReward.amount);
     }
 
     await updateDoc(userRef, updates);
 
-    return { success: true, newStreak, rewardType, rewardAmount };
+    return { success: true, newStreak, rewardType: todayReward.type, rewardAmount: todayReward.amount };
 
   } catch (error) {
     console.error("Error updating streak with config:", error);

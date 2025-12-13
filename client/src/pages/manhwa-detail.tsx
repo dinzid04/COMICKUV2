@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
-import { Star, Calendar, User, Book, Tag, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { Star, Calendar, User, Book, Tag, ExternalLink, Loader2, AlertCircle, Coins, Lock, Check } from "lucide-react";
 import { api, extractChapterId } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SEO } from "@/components/seo";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebaseConfig";
-import { doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, deleteDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,8 @@ export default function ManhwaDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [lockedChapters, setLockedChapters] = useState<Record<string, {price: number}>>({});
+  const [unlockedChapters, setUnlockedChapters] = useState<Set<string>>(new Set());
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["manhwa-detail", manhwaId],
@@ -30,6 +32,7 @@ export default function ManhwaDetail() {
     enabled: !!manhwaId,
   });
 
+  // Check Favorite Status
   useEffect(() => {
     if (!user || !data) return;
     const checkFavorite = async () => {
@@ -39,6 +42,50 @@ export default function ManhwaDetail() {
     };
     checkFavorite();
   }, [user, data, manhwaId]);
+
+  // Check Locked Chapters for this Manhwa
+  useEffect(() => {
+    // If we have manhwaId, fetch any locked chapters associated with it
+    const fetchLocks = async () => {
+      // 1. Fetch from locked_chapters where manhwaId == manhwaId
+      // Note: This requires an index. If not present, we might just fetch individual IDs if we had them,
+      // but simpler to rely on the admin saving manhwaId.
+      try {
+        const q = query(collection(db, "locked_chapters"), where("manhwaId", "==", manhwaId));
+        const querySnapshot = await getDocs(q);
+        const locks: Record<string, {price: number}> = {};
+        querySnapshot.forEach((doc) => {
+           // Key by chapter ID (slug part)
+           locks[doc.id] = { price: doc.data().price };
+        });
+        setLockedChapters(locks);
+
+        // 2. If user logged in, check which they unlocked
+        if (user) {
+           const unlockedSet = new Set<string>();
+           // We can't easily query all subcollections efficiently without knowing IDs,
+           // but we can query "unlocked_chapters" collection group or just iterate if not too many.
+           // Better: Query "users/{uid}/unlocked_chapters" - get all docs
+           // Since we don't store manhwaId in unlocked_chapters (only chapterId as key), we fetch all.
+           // This might be large over time.
+           // Optimization: Check specifically for chapters in 'locks' map.
+
+           if (Object.keys(locks).length > 0) {
+              // Only check the ones that are locked
+              await Promise.all(Object.keys(locks).map(async (chapId) => {
+                 const snap = await getDoc(doc(db, "users", user.uid, "unlocked_chapters", chapId));
+                 if(snap.exists()) unlockedSet.add(chapId);
+              }));
+              setUnlockedChapters(unlockedSet);
+           }
+        }
+
+      } catch (e) {
+        console.error("Error fetching locks", e);
+      }
+    };
+    fetchLocks();
+  }, [manhwaId, user]);
 
   const displayImage = data?.imageSrc || fallbackImage || '';
 
@@ -227,7 +274,12 @@ export default function ManhwaDetail() {
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           {data.chapters && data.chapters.length > 0 ? (
             <div className="divide-y divide-border">
-              {data.chapters.map((chapter) => (
+              {data.chapters.map((chapter) => {
+                const chapterId = extractChapterId(chapter.slug);
+                const isLocked = lockedChapters[chapterId];
+                const isUnlocked = unlockedChapters.has(chapterId);
+
+                return (
                 <div
                   key={chapter.slug}
                   onClick={() => handleChapterClick(chapter.slug)}
@@ -235,12 +287,28 @@ export default function ManhwaDetail() {
                   data-testid={`link-chapter-${chapter.slug}`}
                 >
                   <div>
-                    <h3 className="font-semibold">{chapter.title}</h3>
+                    <h3 className="font-semibold flex items-center gap-2">
+                      {chapter.title}
+                      {isLocked && !isUnlocked && (
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/20 border-yellow-500/20">
+                            <Coins className="w-3 h-3 mr-1" /> {isLocked.price}
+                          </Badge>
+                      )}
+                      {isLocked && isUnlocked && (
+                           <Badge variant="outline" className="text-green-500 border-green-500/50">
+                               <Check className="w-3 h-3 mr-1" /> Unlocked
+                           </Badge>
+                      )}
+                    </h3>
                     <p className="text-sm text-muted-foreground">{chapter.date}</p>
                   </div>
-                  <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                  {isLocked && !isUnlocked ? (
+                      <Lock className="h-5 w-5 text-yellow-500/70" />
+                  ) : (
+                      <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                  )}
                 </div>
-              ))}
+              )})}
             </div>
           ) : (
             <div className="p-8 text-center text-muted-foreground">
