@@ -3,10 +3,10 @@ import { SEO } from '@/components/seo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
-import { checkDailyStreak } from '@/lib/daily-streak';
+import { checkDailyStreak, updateStreakWithConfig } from '@/lib/daily-streak';
 import { doc, getDoc, collection, query, orderBy, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
-import { Trophy, CheckCircle, Calendar, DollarSign, ExternalLink } from 'lucide-react';
+import { Trophy, CheckCircle, Calendar, DollarSign, ExternalLink, Coins } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "react-qr-code";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,8 @@ interface Donation {
   created_at: any;
 }
 
-const REWARDS = [150, 250, 350, 450, 550, 700, 1000]; // 7 Days
+// Default Rewards if not configured, or placeholders
+const DEFAULT_REWARDS = [150, 250, 350, 450, 550, 700, 1000]; // 7 Days
 
 const SupportPage: React.FC = () => {
   const { user } = useAuth();
@@ -30,9 +31,29 @@ const SupportPage: React.FC = () => {
   const [claimedToday, setClaimedToday] = useState(false);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [rewardConfig, setRewardConfig] = useState<{days: {type: 'xp'|'coin', amount: number}[]}>({
+      days: Array(7).fill({ type: 'xp', amount: 50 })
+  });
 
-  // Fetch Streak Info
+  // Fetch Streak Info & Reward Config
   useEffect(() => {
+    // Fetch Reward Config
+    const fetchConfig = async () => {
+        try {
+            const configRef = doc(db, "settings", "gamification");
+            const configSnap = await getDoc(configRef);
+            if (configSnap.exists()) {
+                const data = configSnap.data();
+                if (data.days) {
+                    setRewardConfig(data as any);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load reward config", e);
+        }
+    };
+    fetchConfig();
+
     if (!user) return;
     const fetchUserData = async () => {
       const userRef = doc(db, 'users', user.uid);
@@ -42,11 +63,21 @@ const SupportPage: React.FC = () => {
         setStreak(data.streak || 0);
 
         // Check if claimed today
-        if (data.lastLoginDate) {
-          const lastDate = data.lastLoginDate.toDate();
+        // Use lastStreakClaim if available (new logic), otherwise fall back to lastLoginDate (migration)
+        const claimDate = data.lastStreakClaim ? data.lastStreakClaim.toDate() : data.lastLoginDate?.toDate();
+
+        if (claimDate) {
           const today = new Date();
-          if (lastDate.toDateString() === today.toDateString()) {
-            setClaimedToday(true);
+          if (claimDate.toDateString() === today.toDateString()) {
+             // If using legacy lastLoginDate, we must ensure it's actually a claim.
+             // But since we just switched logic, users might have lastLoginDate from presence update.
+             // So, strictly speaking, if they haven't claimed with new logic (lastStreakClaim),
+             // we should probably let them claim.
+             // However, to prevent double claiming if they just claimed before the code update...
+             // Safest: Only trust lastStreakClaim if it exists. If not, assume not claimed (or let them claim once).
+             if (data.lastStreakClaim) {
+                 setClaimedToday(true);
+             }
           }
         }
       }
@@ -71,17 +102,19 @@ const SupportPage: React.FC = () => {
     }
     setLoading(true);
     try {
-        const result = await checkDailyStreak(user);
+        // Use the new update function that reads config
+        const result = await updateStreakWithConfig(user);
         if (result.success) {
             setStreak(result.newStreak);
             setClaimedToday(true);
-            toast({ title: "Check-in Successful!", description: `You earned ${result.xpBonus} XP!` });
+            const rewardText = result.rewardType === 'coin' ? 'Coins' : 'XP';
+            toast({ title: "Check-in Successful!", description: `You earned ${result.rewardAmount} ${rewardText}!` });
         } else {
             toast({ title: "Already Checked In", description: "Come back tomorrow!" });
         }
     } catch (e) {
         console.error(e);
-        toast({ title: "Error", variant: "destructive" });
+        toast({ title: "Error", description: "Something went wrong.", variant: "destructive" });
     } finally {
         setLoading(false);
     }
@@ -105,10 +138,21 @@ const SupportPage: React.FC = () => {
             </CardHeader>
             <CardContent>
                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-6">
-                 {REWARDS.map((reward, index) => {
+                 {rewardConfig.days.map((config, index) => {
                     const day = index + 1;
-                    const isCompleted = streak >= day; // Simple logic, ideally based on current cycle
-                    // Complex cycle logic: (streak % 7) == day_index... simplification for UI
+                    // Visualize streak. If streak > 7, we just mod 7 for cycle, but for "Day 1..7" grid,
+                    // we show if streak >= day (for first week) OR if user is in that day of cycle.
+                    // Simplified: Just highlight current day of cycle.
+                    const cycleDay = (streak % 7);
+                    // Note: streak 1 = index 0. streak 0 = no active.
+                    // If streak is 8, it's index 0 again.
+                    // If cycleDay matches index, it's next/current target.
+
+                    const isCompleted = streak > 0 && (streak % 7) > index; // Completed in current cycle
+                    const isCurrent = (streak % 7) === index; // Next to claim
+
+                    // Actually, simpler logic:
+                    // Just show the 7 days plan. Highlight the one that corresponds to (streak % 7).
                     const isActive = (streak % 7) === index;
 
                     return (
@@ -118,8 +162,11 @@ const SupportPage: React.FC = () => {
                             ${isCompleted && !isActive ? 'opacity-50' : ''}
                         `}>
                             <span className="text-xs font-bold text-muted-foreground">Day {day}</span>
-                            <span className="text-lg font-bold text-primary">+{reward}</span>
-                            <span className="text-[10px] text-muted-foreground">XP</span>
+                            <span className="text-lg font-bold text-primary flex items-center gap-1">
+                                +{config.amount}
+                                {config.type === 'coin' && <Coins className="h-3 w-3" />}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground uppercase">{config.type}</span>
                         </div>
                     );
                  })}

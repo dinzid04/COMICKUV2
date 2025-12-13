@@ -31,7 +31,10 @@ export const useUserProfile = () => {
       } as User;
     },
     enabled: !!user?.uid,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    // staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    // Reduced staleTime significantly or removed it to ensure coin updates (which happen frequently) are reflected
+    // Firestore listener would be better, but for now short stale time helps.
+    staleTime: 1000 * 10, // 10 seconds
   });
 
   const invalidateProfile = () => {

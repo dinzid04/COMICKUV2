@@ -1,16 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link, useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, Home, Loader2, AlertCircle, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, Loader2, AlertCircle, Play, Lock, Coins } from "lucide-react";
 import { api, extractChapterId } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useRef } from "react";
 import { SEO } from "@/components/seo";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebaseConfig";
-import { doc, setDoc, getDoc, increment } from "firebase/firestore";
+import { doc, setDoc, getDoc, increment, updateDoc } from "firebase/firestore";
 import { AutoScrollControls } from "@/components/auto-scroll-controls";
 import { XP_PER_CHAPTER } from "@/lib/gamification";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface ManhwaState {
   manhwaId: string;
@@ -31,6 +32,13 @@ export default function ChapterReader() {
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
+  // Locking State
+  const [isLocked, setIsLocked] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [lockPrice, setLockPrice] = useState(0);
+  const [checkingLock, setCheckingLock] = useState(true);
+  const [unlocking, setUnlocking] = useState(false);
+
   useEffect(() => {
     const storedState = sessionStorage.getItem('currentManhwa');
     if (storedState) {
@@ -44,8 +52,88 @@ export default function ChapterReader() {
     enabled: !!chapterId,
   });
 
+  // Check Lock Status
+  useEffect(() => {
+    const checkLockStatus = async () => {
+      setCheckingLock(true);
+      try {
+        const lockRef = doc(db, "locked_chapters", chapterId);
+        const lockSnap = await getDoc(lockRef);
+
+        if (lockSnap.exists()) {
+          const lockData = lockSnap.data();
+          if (lockData.isLocked) {
+            setIsLocked(true);
+            setLockPrice(lockData.price || 0);
+
+            // Check if user owns it
+            if (user) {
+               const unlockRef = doc(db, "users", user.uid, "unlocked_chapters", chapterId);
+               const unlockSnap = await getDoc(unlockRef);
+               if (unlockSnap.exists()) {
+                  setIsUnlocked(true);
+               }
+            }
+          }
+        }
+      } catch (e) {
+         console.error("Lock check error", e);
+      } finally {
+         setCheckingLock(false);
+      }
+    };
+    checkLockStatus();
+  }, [chapterId, user]);
+
+  const handleUnlock = async () => {
+      if (!user) {
+          toast({ title: "Login required", description: "Please login to unlock chapters." });
+          return;
+      }
+      setUnlocking(true);
+      try {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+
+          if (!userSnap.exists()) {
+             throw new Error("User not found");
+          }
+
+          const userData = userSnap.data();
+          const userCoins = userData.coins || 0;
+
+          if (userCoins < lockPrice) {
+             toast({ title: "Insufficient Coins", description: "You don't have enough coins.", variant: "destructive" });
+             setUnlocking(false);
+             return;
+          }
+
+          // Deduct coins and unlock
+          // Note: In production this should be a Transaction or Cloud Function to be safe
+          await updateDoc(userRef, {
+             coins: increment(-lockPrice)
+          });
+
+          const unlockRef = doc(db, "users", user.uid, "unlocked_chapters", chapterId);
+          await setDoc(unlockRef, {
+             unlockedAt: new Date(),
+             pricePaid: lockPrice
+          });
+
+          setIsUnlocked(true);
+          toast({ title: "Chapter Unlocked!", description: "Happy reading!" });
+
+      } catch (e) {
+          console.error("Unlock failed", e);
+          toast({ title: "Error", description: "Failed to unlock chapter.", variant: "destructive" });
+      } finally {
+          setUnlocking(false);
+      }
+  };
+
   // Scroll to top when chapter changes and save history
   useEffect(() => {
+    if (isLocked && !isUnlocked) return; // Don't track history if locked
     // Restore scroll position logic
     const savedScrollPos = localStorage.getItem(`scroll_pos_${chapterId}`);
     if (savedScrollPos) {
@@ -161,7 +249,7 @@ export default function ChapterReader() {
     return () => stopScrolling();
   }, [isScrolling, scrollSpeed]);
 
-  if (isLoading) {
+  if (isLoading || checkingLock) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -183,6 +271,77 @@ export default function ChapterReader() {
         </Link>
       </div>
     );
+  }
+
+  if (isLocked && !isUnlocked) {
+     return (
+        <div className="min-h-screen bg-black flex flex-col">
+           {/* Header - Fixed */}
+            <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+                <div className="container mx-auto max-w-4xl px-4 py-3">
+                <div className="flex items-center justify-between">
+                    <Link
+                    href="/"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring hover:bg-accent hover:text-accent-foreground min-h-8 px-3 py-2"
+                    >
+                    <Home className="h-4 w-4" />
+                    <span className="hidden sm:inline">Home</span>
+                    </Link>
+                    <h1 className="font-semibold text-sm sm:text-base text-center flex-1 mx-4 line-clamp-1">
+                    {data.title}
+                    </h1>
+                </div>
+                </div>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6 text-center">
+                <div className="p-6 bg-muted/10 rounded-full border border-muted/20">
+                    <Lock className="h-16 w-16 text-primary" />
+                </div>
+                <div>
+                    <h2 className="text-3xl font-bold mb-2 text-white">Chapter Locked</h2>
+                    <p className="text-muted-foreground">You need to unlock this chapter to continue reading.</p>
+                </div>
+
+                <div className="bg-card p-6 rounded-xl border border-border w-full max-w-sm">
+                    <div className="flex items-center justify-between mb-6">
+                        <span className="text-sm font-medium text-muted-foreground">Price</span>
+                        <div className="flex items-center gap-2 text-yellow-500">
+                             <Coins className="h-5 w-5 fill-current" />
+                             <span className="text-2xl font-bold">{lockPrice}</span>
+                        </div>
+                    </div>
+
+                    {!user ? (
+                         <Button className="w-full" asChild>
+                            <Link href="/login">Login to Unlock</Link>
+                         </Button>
+                    ) : (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold h-12">
+                                    Unlock Now <Lock className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Unlock Chapter</DialogTitle>
+                                    <DialogDescription>
+                                        Use {lockPrice} coins to unlock <strong>{data.title}</strong>?
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <Button onClick={handleUnlock} disabled={unlocking} className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-black">
+                                        {unlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Unlock"}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </div>
+            </div>
+        </div>
+     );
   }
 
   return (

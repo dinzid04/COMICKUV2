@@ -50,3 +50,65 @@ export const checkDailyStreak = async (user: User) => {
     return { success: false, error };
   }
 };
+
+export const updateStreakWithConfig = async (user: User) => {
+  if (!user) return { success: false, message: "User not logged in" };
+
+  const userRef = doc(db, "users", user.uid);
+  const configRef = doc(db, "settings", "gamification");
+
+  try {
+    const [userDoc, configDoc] = await Promise.all([
+      getDoc(userRef),
+      getDoc(configRef)
+    ]);
+
+    if (!userDoc.exists()) return { success: false, message: "User profile not found" };
+
+    const userData = userDoc.data();
+    const configData = configDoc.exists() ? configDoc.data() : {};
+
+    const daysConfig = configData.days || Array(7).fill({ type: 'xp', amount: 50 });
+
+    // Use lastStreakClaim instead of lastLoginDate to decouple from general activity
+    const lastClaim = userData.lastStreakClaim ? userData.lastStreakClaim.toDate() : null;
+    const now = new Date();
+
+    let newStreak = userData.streak || 0;
+
+    if (lastClaim && isSameDay(lastClaim, now)) {
+       return { success: false, message: "Already checked in today" };
+    }
+
+    if (lastClaim && isYesterday(lastClaim)) {
+      newStreak += 1;
+    } else {
+      newStreak = 1; // Reset or First time
+    }
+
+    // Determine reward based on day index (0-6)
+    // Streak 1 = Index 0
+    const dayIndex = (newStreak - 1) % 7;
+    const todayReward = daysConfig[dayIndex] || { type: 'xp', amount: 50 };
+
+    const updates: any = {
+      lastStreakClaim: serverTimestamp(), // Update the dedicated claim timestamp
+      lastLoginDate: serverTimestamp(), // Keep this for general stats
+      streak: newStreak
+    };
+
+    if (todayReward.type === 'coin') {
+      updates.coins = increment(todayReward.amount);
+    } else {
+      updates.xp = increment(todayReward.amount);
+    }
+
+    await updateDoc(userRef, updates);
+
+    return { success: true, newStreak, rewardType: todayReward.type, rewardAmount: todayReward.amount };
+
+  } catch (error) {
+    console.error("Error updating streak with config:", error);
+    return { success: false, error };
+  }
+};
