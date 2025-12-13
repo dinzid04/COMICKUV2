@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon, MessageSquare, Coins } from "lucide-react";
+import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon, MessageSquare, Coins, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -127,9 +127,16 @@ export function Header() {
               </Button>
             </Link>
             {user && (
-               <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-full border border-yellow-500/20">
-                  <Coins className="h-4 w-4 fill-current" />
-                  <span className="font-bold text-sm">{userProfile?.coins || 0}</span>
+               <div className="flex items-center gap-2">
+                 <Link href="/support">
+                    <Button variant="ghost" size="icon" className="hover-elevate active-elevate-2 text-pink-500 hover:text-pink-600">
+                        <Gift className="h-5 w-5" />
+                    </Button>
+                 </Link>
+                 <div className="flex items-center gap-1 px-3 py-1 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-full border border-yellow-500/20">
+                    <Coins className="h-4 w-4 fill-current" />
+                    <span className="font-bold text-sm">{userProfile?.coins || 0}</span>
+                 </div>
                </div>
             )}
             {user ? (

@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { SEO } from "@/components/seo";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/firebaseConfig";
-import { doc, setDoc, deleteDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, deleteDoc, getDoc, collection, query, where, getDocs, updateDoc, increment } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentSection from "@/components/CommentSection";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ManhwaDetail() {
   const [, params] = useRoute("/manhwa/:id");
@@ -25,6 +26,11 @@ export default function ManhwaDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [lockedChapters, setLockedChapters] = useState<Record<string, {price: number}>>({});
   const [unlockedChapters, setUnlockedChapters] = useState<Set<string>>(new Set());
+
+  // Unlock Dialog State
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [selectedChapter, setSelectedChapter] = useState<{slug: string, id: string, price: number, title: string} | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["manhwa-detail", manhwaId],
@@ -116,9 +122,21 @@ export default function ManhwaDetail() {
     }
   };
 
-  const handleChapterClick = (chapterSlug: string) => {
+  const handleChapterClick = (chapterSlug: string, isLocked: boolean, isUnlocked: boolean, price: number, title: string) => {
     if (!data || !displayImage) return;
     const chapterId = extractChapterId(chapterSlug);
+
+    // If locked and not unlocked, open dialog instead of navigating
+    if (isLocked && !isUnlocked) {
+        if (!user) {
+            toast({ title: "Login Required", description: "Please login to unlock chapters." });
+            return;
+        }
+        setSelectedChapter({ slug: chapterSlug, id: chapterId, price, title });
+        setUnlockDialogOpen(true);
+        return;
+    }
+
     // Save manhwa details to session storage for the reader page
     sessionStorage.setItem('currentManhwa', JSON.stringify({
       manhwaId: manhwaId,
@@ -126,6 +144,52 @@ export default function ManhwaDetail() {
       manhwaImage: displayImage,
     }));
     navigate(`/chapter/${chapterId}`);
+  };
+
+  const handleUnlockConfirm = async () => {
+    if (!user || !selectedChapter) return;
+    setUnlocking(true);
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) return;
+
+        const userData = userSnap.data();
+        const userCoins = userData.coins || 0;
+
+        if (userCoins < selectedChapter.price) {
+            toast({ title: "Insufficient Coins", description: "You need more coins.", variant: "destructive" });
+            setUnlocking(false);
+            return;
+        }
+
+        // Deduct coins
+        await updateDoc(userRef, {
+            coins: increment(-selectedChapter.price)
+        });
+
+        // Record unlock
+        const unlockRef = doc(db, "users", user.uid, "unlocked_chapters", selectedChapter.id);
+        await setDoc(unlockRef, {
+            unlockedAt: new Date(),
+            pricePaid: selectedChapter.price
+        });
+
+        // Update local state
+        setUnlockedChapters(prev => new Set(prev).add(selectedChapter.id));
+        toast({ title: "Unlocked!", description: `You can now read ${selectedChapter.title}` });
+        setUnlockDialogOpen(false);
+
+        // Optionally navigate immediately
+        // handleChapterClick(selectedChapter.slug, false, true, 0, selectedChapter.title);
+
+    } catch (e) {
+        console.error("Unlock error", e);
+        toast({ title: "Error", description: "Failed to unlock.", variant: "destructive" });
+    } finally {
+        setUnlocking(false);
+    }
   };
 
   if (isLoading) {
@@ -276,22 +340,26 @@ export default function ManhwaDetail() {
             <div className="divide-y divide-border">
               {data.chapters.map((chapter) => {
                 const chapterId = extractChapterId(chapter.slug);
-                const isLocked = lockedChapters[chapterId];
+                const isLockedInfo = lockedChapters[chapterId];
+                const isLocked = !!isLockedInfo;
                 const isUnlocked = unlockedChapters.has(chapterId);
 
                 return (
                 <div
                   key={chapter.slug}
-                  onClick={() => handleChapterClick(chapter.slug)}
-                  className="flex items-center justify-between p-4 hover-elevate active-elevate-2 transition-all cursor-pointer"
+                  onClick={() => handleChapterClick(chapter.slug, isLocked, isUnlocked, isLockedInfo?.price || 0, chapter.title)}
+                  className={`
+                    flex items-center justify-between p-4 transition-all cursor-pointer border-b last:border-0
+                    ${isLocked && !isUnlocked ? 'bg-muted/30 hover:bg-muted/50' : 'hover-elevate active-elevate-2'}
+                  `}
                   data-testid={`link-chapter-${chapter.slug}`}
                 >
                   <div>
-                    <h3 className="font-semibold flex items-center gap-2">
+                    <h3 className={`font-semibold flex items-center gap-2 ${isLocked && !isUnlocked ? 'text-muted-foreground' : ''}`}>
                       {chapter.title}
                       {isLocked && !isUnlocked && (
                           <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/20 border-yellow-500/20">
-                            <Coins className="w-3 h-3 mr-1" /> {isLocked.price}
+                            <Coins className="w-3 h-3 mr-1" /> {isLockedInfo.price}
                           </Badge>
                       )}
                       {isLocked && isUnlocked && (
@@ -317,6 +385,24 @@ export default function ManhwaDetail() {
           )}
         </div>
       </div>
+
+      {/* Unlock Dialog */}
+      <Dialog open={unlockDialogOpen} onOpenChange={setUnlockDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Unlock Chapter</DialogTitle>
+                <DialogDescription>
+                    Unlock <strong>{selectedChapter?.title}</strong> for {selectedChapter?.price} Coins?
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setUnlockDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleUnlockConfirm} disabled={unlocking} className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+                    {unlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : "Unlock Now"}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Comment Section */}
       <div className="container mx-auto max-w-7xl px-4 py-12">

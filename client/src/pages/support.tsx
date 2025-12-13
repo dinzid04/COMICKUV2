@@ -63,11 +63,21 @@ const SupportPage: React.FC = () => {
         setStreak(data.streak || 0);
 
         // Check if claimed today
-        if (data.lastLoginDate) {
-          const lastDate = data.lastLoginDate.toDate();
+        // Use lastStreakClaim if available (new logic), otherwise fall back to lastLoginDate (migration)
+        const claimDate = data.lastStreakClaim ? data.lastStreakClaim.toDate() : data.lastLoginDate?.toDate();
+
+        if (claimDate) {
           const today = new Date();
-          if (lastDate.toDateString() === today.toDateString()) {
-            setClaimedToday(true);
+          if (claimDate.toDateString() === today.toDateString()) {
+             // If using legacy lastLoginDate, we must ensure it's actually a claim.
+             // But since we just switched logic, users might have lastLoginDate from presence update.
+             // So, strictly speaking, if they haven't claimed with new logic (lastStreakClaim),
+             // we should probably let them claim.
+             // However, to prevent double claiming if they just claimed before the code update...
+             // Safest: Only trust lastStreakClaim if it exists. If not, assume not claimed (or let them claim once).
+             if (data.lastStreakClaim) {
+                 setClaimedToday(true);
+             }
           }
         }
       }

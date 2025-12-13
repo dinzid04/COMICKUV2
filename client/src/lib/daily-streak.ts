@@ -70,16 +70,17 @@ export const updateStreakWithConfig = async (user: User) => {
 
     const daysConfig = configData.days || Array(7).fill({ type: 'xp', amount: 50 });
 
-    const lastLogin = userData.lastLoginDate ? userData.lastLoginDate.toDate() : null;
+    // Use lastStreakClaim instead of lastLoginDate to decouple from general activity
+    const lastClaim = userData.lastStreakClaim ? userData.lastStreakClaim.toDate() : null;
     const now = new Date();
 
     let newStreak = userData.streak || 0;
 
-    if (lastLogin && isSameDay(lastLogin, now)) {
+    if (lastClaim && isSameDay(lastClaim, now)) {
        return { success: false, message: "Already checked in today" };
     }
 
-    if (lastLogin && isYesterday(lastLogin)) {
+    if (lastClaim && isYesterday(lastClaim)) {
       newStreak += 1;
     } else {
       newStreak = 1; // Reset or First time
@@ -91,7 +92,8 @@ export const updateStreakWithConfig = async (user: User) => {
     const todayReward = daysConfig[dayIndex] || { type: 'xp', amount: 50 };
 
     const updates: any = {
-      lastLoginDate: serverTimestamp(),
+      lastStreakClaim: serverTimestamp(), // Update the dedicated claim timestamp
+      lastLoginDate: serverTimestamp(), // Keep this for general stats
       streak: newStreak
     };
 
