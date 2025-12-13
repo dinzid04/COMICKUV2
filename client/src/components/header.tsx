@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon, MessageSquare } from "lucide-react";
+import { Search, BookOpen, Moon, Sun, Menu, X, Heart, History, LogOut, LogIn, User as UserIcon, MessageSquare, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -136,6 +136,14 @@ export function Header() {
                 )}
               </Button>
             </Link>
+
+            {user && userProfile?.coins !== undefined && (
+              <div className="flex items-center px-2 py-1 bg-yellow-500/10 rounded-full border border-yellow-500/20">
+                  <Coins className="h-4 w-4 text-yellow-500 mr-1.5" />
+                  <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">{userProfile.coins || 0}</span>
+              </div>
+            )}
+
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
